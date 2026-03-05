@@ -1,0 +1,82 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connetti alla Camera Hi3510",
+        "description": "Inserisci i dati di connessione della tua IP camera Hi3510.",
+        "data": {
+          "host": "Host",
+          "port": "Porta HTTP",
+          "username": "Nome utente",
+          "password": "Password",
+          "rtsp_port": "Porta RTSP"
+        },
+        "data_description": {
+          "host": "Indirizzo IP o hostname della camera",
+          "port": "Porta HTTP (default 80)",
+          "rtsp_port": "Porta streaming RTSP (default 554)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossibile connettersi alla camera",
+      "invalid_auth": "Nome utente o password non validi",
+      "not_hi3510": "Il dispositivo non sembra essere una camera Hi3510",
+      "unknown": "Errore sconosciuto"
+    },
+    "abort": {
+      "already_configured": "Questa camera è già configurata"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Camera Hi3510",
+        "data": {
+          "host": "Host",
+          "port": "Porta HTTP",
+          "username": "Nome utente",
+          "password": "Password",
+          "rtsp_port": "Porta RTSP"
+        }
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "onvif": { "name": "ONVIF" },
+      "recording": { "name": "Registrazione SD" },
+      "flip": { "name": "Capovolgi" },
+      "mirror": { "name": "Specchia" },
+      "osd_region_0": { "name": "OSD Data/Ora" },
+      "osd_region_1": { "name": "OSD Nome Camera" }
+    },
+    "select": {
+      "infrared": { "name": "Modalità Infrarossi" },
+      "osd_place_0": { "name": "Posizione OSD Data/Ora" },
+      "osd_place_1": { "name": "Posizione OSD Nome" }
+    },
+    "number": {
+      "brightness": { "name": "Luminosità" },
+      "contrast": { "name": "Contrasto" },
+      "saturation": { "name": "Saturazione" },
+      "sharpness": { "name": "Nitidezza" },
+      "audio_in_volume": { "name": "Volume Audio Ingresso" },
+      "audio_out_volume": { "name": "Volume Audio Uscita" }
+    },
+    "button": {
+      "reboot": { "name": "Riavvia" }
+    },
+    "binary_sensor": {
+      "motion": { "name": "Movimento" }
+    },
+    "text": {
+      "osd_text_1": { "name": "Testo OSD Nome Camera" }
+    },
+    "sensor": {
+      "sd_free_space": { "name": "Spazio Libero SD" },
+      "sd_total_space": { "name": "Spazio Totale SD" },
+      "sd_status": { "name": "Stato SD" }
+    }
+  }
+}

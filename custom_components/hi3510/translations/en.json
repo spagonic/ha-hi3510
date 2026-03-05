@@ -1,0 +1,82 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Hi3510 Camera",
+        "description": "Enter the connection details for your Hi3510 IP camera.",
+        "data": {
+          "host": "Host",
+          "port": "HTTP Port",
+          "username": "Username",
+          "password": "Password",
+          "rtsp_port": "RTSP Port"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the camera",
+          "port": "HTTP port (default 80)",
+          "rtsp_port": "RTSP streaming port (default 554)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to camera",
+      "invalid_auth": "Invalid username or password",
+      "not_hi3510": "Device does not appear to be a Hi3510 camera",
+      "unknown": "Unknown error occurred"
+    },
+    "abort": {
+      "already_configured": "This camera is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hi3510 Camera Options",
+        "data": {
+          "host": "Host",
+          "port": "HTTP Port",
+          "username": "Username",
+          "password": "Password",
+          "rtsp_port": "RTSP Port"
+        }
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "onvif": { "name": "ONVIF" },
+      "recording": { "name": "SD Recording" },
+      "flip": { "name": "Flip" },
+      "mirror": { "name": "Mirror" },
+      "osd_region_0": { "name": "OSD Timestamp" },
+      "osd_region_1": { "name": "OSD Camera Name" }
+    },
+    "select": {
+      "infrared": { "name": "Infrared Mode" },
+      "osd_place_0": { "name": "OSD Timestamp Position" },
+      "osd_place_1": { "name": "OSD Name Position" }
+    },
+    "number": {
+      "brightness": { "name": "Brightness" },
+      "contrast": { "name": "Contrast" },
+      "saturation": { "name": "Saturation" },
+      "sharpness": { "name": "Sharpness" },
+      "audio_in_volume": { "name": "Audio Input Volume" },
+      "audio_out_volume": { "name": "Audio Output Volume" }
+    },
+    "button": {
+      "reboot": { "name": "Reboot" }
+    },
+    "binary_sensor": {
+      "motion": { "name": "Motion" }
+    },
+    "text": {
+      "osd_text_1": { "name": "OSD Text Region 1" }
+    },
+    "sensor": {
+      "sd_free_space": { "name": "SD Free Space" },
+      "sd_total_space": { "name": "SD Total Space" },
+      "sd_status": { "name": "SD Status" }
+    }
+  }
+}

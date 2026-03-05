@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="40" fill="#1a73e8"/>
+  <g transform="translate(128,128)">
+    <!-- Camera body -->
+    <rect x="-70" y="-45" width="140" height="90" rx="12" fill="white"/>
+    <!-- Lens -->
+    <circle cx="0" cy="0" r="32" fill="#1a73e8" stroke="white" stroke-width="4"/>
+    <circle cx="0" cy="0" r="20" fill="#4a9ff5"/>
+    <circle cx="0" cy="0" r="8" fill="white"/>
+    <!-- Flash/IR -->
+    <circle cx="50" cy="-25" r="8" fill="#ff5252"/>
+    <!-- Status LED -->
+    <circle cx="-50" cy="-25" r="5" fill="#4caf50"/>
+  </g>
+</svg>
