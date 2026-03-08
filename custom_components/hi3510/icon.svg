@@ -1,15 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-  <rect width="256" height="256" rx="40" fill="#1a73e8"/>
-  <g transform="translate(128,128)">
-    <!-- Camera body -->
-    <rect x="-70" y="-45" width="140" height="90" rx="12" fill="white"/>
-    <!-- Lens -->
-    <circle cx="0" cy="0" r="32" fill="#1a73e8" stroke="white" stroke-width="4"/>
-    <circle cx="0" cy="0" r="20" fill="#4a9ff5"/>
-    <circle cx="0" cy="0" r="8" fill="white"/>
-    <!-- Flash/IR -->
-    <circle cx="50" cy="-25" r="8" fill="#ff5252"/>
-    <!-- Status LED -->
-    <circle cx="-50" cy="-25" r="5" fill="#4caf50"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1976D2"/>
+      <stop offset="100%" stop-color="#0D47A1"/>
+    </linearGradient>
+    <linearGradient id="cam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E0E0E0"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="256" height="256" rx="52" fill="url(#bg)"/>
+  <!-- Subtle inner shadow -->
+  <rect x="4" y="4" width="248" height="248" rx="50" fill="none" stroke="white" stroke-width="0.5" opacity="0.15"/>
+
+  <!-- Surveillance camera - top area -->
+  <g transform="translate(128, 88)">
+    <!-- Wall mount plate -->
+    <rect x="-68" y="-38" width="20" height="32" rx="3" fill="white" opacity="0.85"/>
+    <!-- Mounting arm angled -->
+    <path d="M-52,-26 L-20,-18" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.85"/>
+    <!-- Camera housing - cylindrical bullet -->
+    <rect x="-28" y="-30" width="80" height="36" rx="18" fill="url(#cam)"/>
+    <!-- Lens shroud -->
+    <circle cx="48" cy="-12" r="18" fill="#455A64"/>
+    <!-- Lens rings -->
+    <circle cx="48" cy="-12" r="14" fill="#263238"/>
+    <circle cx="48" cy="-12" r="10" fill="#1A237E" opacity="0.6"/>
+    <circle cx="48" cy="-12" r="6" fill="#283593" opacity="0.8"/>
+    <!-- Lens highlight -->
+    <circle cx="48" cy="-12" r="3" fill="white" opacity="0.35"/>
+    <circle cx="44" cy="-16" r="2" fill="white" opacity="0.5"/>
+    <!-- IR LED glow -->
+    <circle cx="68" cy="-12" r="3.5" fill="#F44336" opacity="0.9"/>
+    <circle cx="68" cy="-12" r="6" fill="#F44336" opacity="0.2"/>
+  </g>
+
+  <!-- "CS" letters - bold, modern -->
+  <g transform="translate(128, 186)">
+    <!-- C letter -->
+    <path d="M-38,-22 C-38,-34 -28,-42 -14,-42 C-6,-42 0,-39 4,-34 L-2,-27 C-4,-30 -8,-33 -14,-33 C-22,-33 -28,-27 -28,-22 C-28,-17 -22,-11 -14,-11 C-8,-11 -4,-14 -2,-17 L4,-10 C0,-5 -6,-2 -14,-2 C-28,-2 -38,-10 -38,-22Z" fill="white"/>
+    <!-- S letter -->
+    <path d="M22,-42 C34,-42 42,-37 42,-30 C42,-23 36,-19 26,-17 L18,-15 C14,-14 12,-12 12,-10 C12,-7 16,-5 22,-5 C28,-5 33,-7 36,-11 L42,-4 C38,0 31,3 22,3 C10,3 2,-3 2,-10 C2,-17 8,-21 18,-23 L26,-25 C30,-26 32,-28 32,-30 C32,-33 28,-35 22,-35 C16,-35 12,-33 10,-29 L4,-36 C8,-40 14,-42 22,-42Z" fill="white"/>
   </g>
 </svg>
