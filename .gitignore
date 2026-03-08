@@ -29,5 +29,20 @@ hi3510_*.py
 *.sh
 *.jpg
 
+# Binary/large files
+*.pkg
+*.pcapng
+
+# HA config files (local copies)
+automations_ha.yaml
+configuration_ha.yaml
+compat_output.txt
+
+# Utility scripts
+capture_*.py
+scan_*.py
+deploy_*.py
+_smb_deploy.py
+
 # Kiro workspace
 .kiro/

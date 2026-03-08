@@ -2,7 +2,34 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to Hi3510 Camera",
+        "title": "Hi3510 IP Camera",
+        "description": "Choose how to add your camera.",
+        "data": {
+          "method": "Setup method"
+        }
+      },
+      "scan": {
+        "title": "Select Camera",
+        "description": "Found {count} camera(s) on your network. Select 'Rescan' to search again.",
+        "data": {
+          "selected_camera": "Camera"
+        }
+      },
+      "no_cameras": {
+        "title": "No Cameras Found",
+        "description": "No new Hi3510 cameras were found on the network. Click Submit to enter details manually."
+      },
+      "credentials": {
+        "title": "Camera Credentials",
+        "description": "Enter credentials for camera at {host}",
+        "data": {
+          "username": "Username",
+          "password": "Password",
+          "rtsp_port": "RTSP Port"
+        }
+      },
+      "manual": {
+        "title": "Manual Camera Setup",
         "description": "Enter the connection details for your Hi3510 IP camera.",
         "data": {
           "host": "Host",
