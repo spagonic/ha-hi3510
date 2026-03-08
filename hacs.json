@@ -1,7 +1,5 @@
 {
   "name": "Hi3510 IP Camera",
   "render_readme": true,
-  "domains": ["camera", "switch", "select", "number", "button", "binary_sensor", "text", "sensor"],
-  "iot_class": "local_polling",
   "homeassistant": "2024.1.0"
 }
