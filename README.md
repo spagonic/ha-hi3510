@@ -1,5 +1,9 @@
 # Hi3510 IP Camera - Home Assistant Integration
 
+<p align="center">
+  <img src="custom_components/hi3510/brand/icon@2x.png" alt="Hi3510 IP Camera" width="200">
+</p>
+
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/spagonic/ha-hi3510)
 
@@ -233,3 +237,9 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 ## License
 
 MIT
+
+---
+
+<p align="center">
+  <sub>🤖 This integration was entirely developed with the assistance of artificial intelligence (Kiro AI IDE).</sub>
+</p>
