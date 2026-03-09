@@ -4,48 +4,8 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Test scripts and utilities (not part of the integration)
-*.json
-!custom_components/hi3510/manifest.json
-!custom_components/hi3510/strings.json
-!custom_components/hi3510/translations/*.json
-!hacs.json
-
-# Local test/fix scripts
-test_*.py
-fix_*.py
-backup_*.py
-restore_*.py
-read_*.py
-set_*.py
-reboot_*.py
-probe_*.py
-check_*.py
-wait_*.py
-find_*.py
-extract_*.py
-get_*.py
-hi3510_*.py
-*.sh
-*.jpg
-
-# Binary/large files
-*.pkg
-*.pcapng
-
-# HA config files (local copies)
-automations_ha.yaml
-configuration_ha.yaml
-compat_output.txt
-
-# Utility scripts
-capture_*.py
-scan_*.py
-deploy_*.py
-_smb_deploy.py
-
-# Local docs (not part of the project)
-HACS_PUBLISHING_GUIDE.md
+# All utility scripts, test files, backups, etc.
+no_git/
 
 # Kiro workspace
 .kiro/
