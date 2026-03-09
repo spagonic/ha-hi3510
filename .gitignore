@@ -44,5 +44,8 @@ scan_*.py
 deploy_*.py
 _smb_deploy.py
 
+# Local docs (not part of the project)
+HACS_PUBLISHING_GUIDE.md
+
 # Kiro workspace
 .kiro/
