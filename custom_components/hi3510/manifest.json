@@ -1,7 +1,7 @@
 {
   "domain": "hi3510",
   "name": "Hi3510 IP Camera",
-  "codeowners": [],
+  "codeowners": ["@spagonic"],
   "config_flow": true,
   "dependencies": ["stream", "network"],
   "documentation": "https://github.com/spagonic/ha-hi3510",
