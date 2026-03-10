@@ -4,8 +4,9 @@
   <img src="custom_components/hi3510/brand/icon@2x.png" alt="Hi3510 IP Camera" width="200">
 </p>
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/spagonic/ha-hi3510)
+[![HACS Validation](https://github.com/spagonic/ha-hi3510/actions/workflows/hacs.yaml/badge.svg)](https://github.com/spagonic/ha-hi3510/actions/workflows/hacs.yaml)
+[![Validate with hassfest](https://github.com/spagonic/ha-hi3510/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/spagonic/ha-hi3510/actions/workflows/hassfest.yaml)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 
 Custom integration for Home Assistant to control IP cameras that use the **Hi3510 CGI protocol** (`/cgi-bin/hi3510/param.cgi`).
 
