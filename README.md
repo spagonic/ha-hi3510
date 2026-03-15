@@ -205,7 +205,7 @@ Browse and play back SD card recordings directly from Home Assistant:
 - **Cache browser** at `/api/hi3510/cache` — grid view of all cameras with video count per month
 - **Per-camera view** with calendar navigation — days with recordings are highlighted
 - Click a day to see the video list, click a video to play it inline with full seek support
-- Supports both H.264 (HXVS) and H.265 (HXVT) container formats
+- Supports H.264 recordings (HXVS container format). H.265 (HXVT) files are parsed but not playable in the browser
 - Recordings are downloaded from the camera, remuxed to MP4 via ffmpeg, and cached locally
 - Cache auto-cleanup based on configurable retention period
 - Filterable by camera group via `?entries=id1,id2,id3` URL parameter
@@ -390,13 +390,13 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 
 ### 1.3.0
 
-- **SD card recording playback**: download, remux (H.264/H.265 → MP4), cache, and play back recordings from the camera's SD card directly in Home Assistant
+- **SD card recording playback**: download, remux (H.264 → MP4), cache, and play back recordings from the camera's SD card directly in Home Assistant
 - **Cache browser UI**: web-based interface with camera grid, calendar month navigation, per-day video list, and inline video player with full seek support
 - **Media source integration**: SD recordings browsable from HA's built-in media browser
 - **Options flow**: single-step configuration for cache retention days and allowed network ranges
 - **IP-based access control**: cache browser accessible without auth token from configured private networks (supports ZeroTier/VPN)
 - **HTTP Range support**: video files served with Range request support for proper seek/scrub in the browser player
-- **HXVT parser**: support for H.265 container format used by newer Hi3510 cameras
+- **HXVS container parser**: extract H.264 elementary streams from Hi3510 proprietary SD card format. H.265 (HXVT) is parsed but not playable in browsers
 - **SD diagnostic sensors**: free space, total space, and SD card status entities
 - **API extensions**: `list_sd_files`, `download_sd_file`, `get_sd_info` methods
 
