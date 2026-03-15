@@ -3,7 +3,7 @@
   "name": "Hi3510 IP Camera",
   "codeowners": ["@spagonic"],
   "config_flow": true,
-  "dependencies": ["stream", "network", "media_source", "ffmpeg"],
+  "dependencies": ["ffmpeg", "http", "media_source", "network", "stream"],
   "documentation": "https://github.com/spagonic/ha-hi3510",
   "integration_type": "device",
   "iot_class": "local_polling",
