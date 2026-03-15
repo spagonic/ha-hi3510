@@ -64,9 +64,18 @@
           "port": "HTTP Port",
           "username": "Username",
           "password": "Password",
-          "rtsp_port": "RTSP Port"
+          "rtsp_port": "RTSP Port",
+          "cache_retention_days": "Cache retention (days)",
+          "allowed_networks": "Allowed networks (CIDR, comma separated)"
+        },
+        "data_description": {
+          "cache_retention_days": "Cached video files older than this will be automatically deleted (1-365)",
+          "allowed_networks": "Only requests from these networks can access the cache browser without authentication"
         }
       }
+    },
+    "error": {
+      "invalid_network": "Invalid network CIDR format"
     }
   },
   "entity": {
@@ -103,7 +112,8 @@
     "sensor": {
       "sd_free_space": { "name": "SD Free Space" },
       "sd_total_space": { "name": "SD Total Space" },
-      "sd_status": { "name": "SD Status" }
+      "sd_status": { "name": "SD Status" },
+      "cached_recordings": { "name": "Cached Recordings" }
     }
   }
 }

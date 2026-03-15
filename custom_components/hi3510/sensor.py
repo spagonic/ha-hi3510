@@ -1,8 +1,9 @@
-"""Sensor entities per Hi3510 IP Camera (diagnostica SD)."""
+"""Sensor entities per Hi3510 IP Camera (diagnostica SD + cache)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from homeassistant.components.sensor import (
     SensorEntity,
@@ -16,7 +17,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, SD_STATUS_MAP
+from .const import CACHE_DIR, DOMAIN, SD_STATUS_MAP
 from .coordinator import Hi3510DataCoordinator
 
 
@@ -63,10 +64,12 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     data = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([
+    entities: list[SensorEntity] = [
         Hi3510Sensor(data["coordinator"], entry, desc)
         for desc in SENSOR_DESCRIPTIONS
-    ])
+    ]
+    entities.append(Hi3510CacheSensor(hass, entry))
+    async_add_entities(entities)
 
 
 class Hi3510Sensor(CoordinatorEntity[Hi3510DataCoordinator], SensorEntity):
@@ -126,3 +129,56 @@ class Hi3510Sensor(CoordinatorEntity[Hi3510DataCoordinator], SensorEntity):
         attrs["ip"] = info.get("ip") or self._entry.data.get("host")
         attrs["mac"] = info.get("macaddress")
         return {k: v for k, v in attrs.items() if v is not None}
+
+
+class Hi3510CacheSensor(SensorEntity):
+    """Sensor che conta i file video in cache per questa camera."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "cached_recordings"
+    _attr_icon = "mdi:filmstrip-box-multiple"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        self._hass = hass
+        self._entry = entry
+        self._attr_unique_id = f"{entry.unique_id}_cached_recordings"
+        self._prefix = f"{entry.entry_id}_"
+        self._cache_dir = Path(hass.config.path(CACHE_DIR))
+        self._cache_url = f"/api/hi3510/cache/{entry.entry_id}"
+        self._count: int = 0
+        self._size_mb: float = 0
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(identifiers={(DOMAIN, self._entry.unique_id)})
+
+    @property
+    def native_value(self) -> int:
+        return self._count
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str | int | float]:
+        return {
+            "cache_browser_url": self._cache_url,
+            "cache_size_mb": self._size_mb,
+        }
+
+    def _scan_cache(self) -> tuple[int, float]:
+        """Conta file e dimensione cache (eseguito in executor)."""
+        if not self._cache_dir.exists():
+            return 0, 0
+        count = 0
+        total = 0
+        for f in self._cache_dir.iterdir():
+            if f.suffix == ".mp4" and f.name.startswith(self._prefix):
+                count += 1
+                total += f.stat().st_size
+        return count, round(total / 1048576, 1)
+
+    async def async_update(self) -> None:
+        """Aggiorna il conteggio dalla cache."""
+        self._count, self._size_mb = await self._hass.async_add_executor_job(
+            self._scan_cache
+        )

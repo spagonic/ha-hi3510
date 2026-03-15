@@ -192,7 +192,158 @@ All image parameters are sent together to prevent firmware from resetting unspec
 
 ### Options Flow
 
-Update connection parameters (host, port, credentials, RTSP port) without removing the camera.
+Configure integration options without removing the camera:
+
+- **Connection**: update host, port, credentials, RTSP port
+- **Cache retention**: set how many days to keep cached recordings (default: 7)
+- **Allowed networks**: restrict cache browser access to specific IP ranges (default: private networks)
+
+### SD Card Recording Playback
+
+Browse and play back SD card recordings directly from Home Assistant:
+
+- **Cache browser** at `/api/hi3510/cache` — grid view of all cameras with video count per month
+- **Per-camera view** with calendar navigation — days with recordings are highlighted
+- Click a day to see the video list, click a video to play it inline with full seek support
+- Supports both H.264 (HXVS) and H.265 (HXVT) container formats
+- Recordings are downloaded from the camera, remuxed to MP4 via ffmpeg, and cached locally
+- Cache auto-cleanup based on configurable retention period
+- Filterable by camera group via `?entries=id1,id2,id3` URL parameter
+- IP-based access control (no auth token required from allowed networks)
+
+#### How to access the cache browser
+
+**Option 1 — Direct URL**: navigate to `http://<your-ha>:8123/api/hi3510/cache` from any browser on your local network.
+
+**Option 2 — Embed in a dashboard**: add an `iframe` card to any Lovelace dashboard:
+
+```yaml
+type: iframe
+url: /api/hi3510/cache
+aspect_ratio: 100%
+```
+
+To show only specific cameras, filter by entry ID:
+
+```yaml
+type: iframe
+url: /api/hi3510/cache?entries=<entry_id_1>,<entry_id_2>
+aspect_ratio: 100%
+```
+
+You can find entry IDs in **Settings → Devices & Services → Hi3510 IP Camera** (click on a device, the entry ID is in the URL).
+
+**Option 3 — Media browser**: open the HA media browser panel and select **Hi3510 IP Camera** to browse recordings per camera.
+
+#### Example: NVR-style dashboard with live view and recordings
+
+You can create a full NVR experience by combining a live camera card with the cache browser in a tabbed dashboard. Here's an example using [advanced-camera-card](https://github.com/dermotduffy/advanced-camera-card) and go2rtc:
+
+```yaml
+# Tab 1: Live View (requires advanced-camera-card + go2rtc)
+views:
+  - title: Live
+    path: live
+    icon: mdi:cctv
+    type: panel
+    cards:
+      - type: custom:advanced-camera-card
+        cameras:
+          - title: Front Door
+            id: front_door
+            live_provider: webrtc-card
+            webrtc_card:
+              url: front_door_sd
+              mode: webrtc
+            dependencies:
+              cameras:
+                - front_door_hd
+          - title: Front Door HD
+            id: front_door_hd
+            live_provider: webrtc-card
+            webrtc_card:
+              url: front_door_hd
+              mode: webrtc
+            capabilities:
+              disable_except:
+                - substream
+          - title: Backyard
+            id: backyard
+            live_provider: webrtc-card
+            webrtc_card:
+              url: backyard_sd
+              mode: webrtc
+            dependencies:
+              cameras:
+                - backyard_hd
+          - title: Backyard HD
+            id: backyard_hd
+            live_provider: webrtc-card
+            webrtc_card:
+              url: backyard_hd
+              mode: webrtc
+            capabilities:
+              disable_except:
+                - substream
+        live:
+          display:
+            mode: grid
+            grid_columns: 2
+          auto_play:
+            - selected
+            - visible
+          lazy_load: true
+          draggable: false
+          controls:
+            builtin: false
+            next_previous:
+              style: none
+            thumbnails:
+              mode: none
+            timeline:
+              mode: none
+        menu:
+          style: hover-card
+          buttons:
+            substreams:
+              enabled: true
+              icon: mdi:high-definition
+            fullscreen:
+              enabled: true
+              alignment: opposing
+        status_bar:
+          style: overlay
+          position: bottom
+          height: 28
+          items:
+            title:
+              enabled: true
+            engine:
+              enabled: false
+            resolution:
+              enabled: false
+            technology:
+              enabled: false
+        dimensions:
+          aspect_ratio_mode: unconstrained
+          height: calc(100vh - 56px)
+
+  # Tab 2: Recordings (cache browser embedded via iframe)
+  - title: Recordings
+    path: recordings
+    icon: mdi:filmstrip-box-multiple
+    type: panel
+    cards:
+      - type: iframe
+        url: /api/hi3510/cache
+        aspect_ratio: 100%
+```
+
+This gives you a two-tab dashboard: the first tab shows a live grid of all cameras with SD/HD substream switching, the second tab embeds the cache browser for recording playback with calendar navigation.
+
+### Media Source
+
+The integration registers as a Home Assistant media source, making SD card recordings browsable from the HA media browser panel.
 
 ## Architecture
 
@@ -234,6 +385,29 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 
 - English
 - Italian
+
+## Changelog
+
+### 1.3.0
+
+- **SD card recording playback**: download, remux (H.264/H.265 → MP4), cache, and play back recordings from the camera's SD card directly in Home Assistant
+- **Cache browser UI**: web-based interface with camera grid, calendar month navigation, per-day video list, and inline video player with full seek support
+- **Media source integration**: SD recordings browsable from HA's built-in media browser
+- **Options flow**: single-step configuration for cache retention days and allowed network ranges
+- **IP-based access control**: cache browser accessible without auth token from configured private networks (supports ZeroTier/VPN)
+- **HTTP Range support**: video files served with Range request support for proper seek/scrub in the browser player
+- **HXVT parser**: support for H.265 container format used by newer Hi3510 cameras
+- **SD diagnostic sensors**: free space, total space, and SD card status entities
+- **API extensions**: `list_sd_files`, `download_sd_file`, `get_sd_info` methods
+
+### 1.2.0
+
+- Initial HACS release
+- Camera entity with RTSP stream and JPEG snapshot
+- Switch, select, number, text, button, binary sensor entities
+- Network discovery in config flow
+- OSD overlay management with anti-overlap validation
+- Motion detection via SD card alarm file monitoring
 
 ## License
 

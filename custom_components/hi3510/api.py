@@ -331,3 +331,32 @@ class Hi3510ApiClient:
                 continue
             entries.append(name)
         return entries
+
+    async def download_sd_file(self, path: str) -> bytes:
+        """Scarica un file dalla SD card (recording .264/.265 o immagine .jpg).
+
+        Usa un timeout lungo (5 min) perché i file plan possono essere ~40 MB.
+        """
+        url = f"{self._base}{path}"
+        long_timeout = aiohttp.ClientTimeout(total=300)
+        _LOGGER.debug("SD download: %s", url)
+        try:
+            async with self._session.get(
+                url, auth=self._auth, timeout=long_timeout
+            ) as resp:
+                if resp.status == 401:
+                    raise Hi3510AuthError("HTTP 401 Unauthorized")
+                if resp.status == 404:
+                    raise Hi3510CommandError(f"File non trovato: {path}")
+                resp.raise_for_status()
+                return await resp.read()
+        except Hi3510Error:
+            raise
+        except aiohttp.ClientError as err:
+            raise Hi3510ConnectionError(
+                f"Download SD fallito {self._host}{path}: {err}"
+            ) from err
+        except TimeoutError as err:
+            raise Hi3510ConnectionError(
+                f"Timeout download SD {self._host}{path}"
+            ) from err

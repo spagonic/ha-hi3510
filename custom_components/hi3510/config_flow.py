@@ -15,7 +15,17 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .api import Hi3510ApiClient, Hi3510AuthError, Hi3510CommandError, Hi3510ConnectionError
-from .const import CONF_RTSP_PORT, DEFAULT_PORT, DEFAULT_RTSP_PORT, DEFAULT_USERNAME, DOMAIN
+from .const import (
+    CACHE_MAX_AGE_DAYS,
+    CONF_ALLOWED_NETWORKS,
+    CONF_CACHE_RETENTION_DAYS,
+    CONF_RTSP_PORT,
+    DEFAULT_ALLOWED_NETWORKS,
+    DEFAULT_PORT,
+    DEFAULT_RTSP_PORT,
+    DEFAULT_USERNAME,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -345,7 +355,7 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class Hi3510OptionsFlow(OptionsFlow):
-    """Options flow per modificare configurazione."""
+    """Options flow per modificare configurazione (singolo step)."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         self._config_entry = config_entry
@@ -353,20 +363,54 @@ class Hi3510OptionsFlow(OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
+        """Unico step: connessione + cache + sicurezza."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            # Estrai dati connessione
+            conn_data = {
+                CONF_HOST: user_input[CONF_HOST],
+                CONF_PORT: user_input[CONF_PORT],
+                CONF_USERNAME: user_input[CONF_USERNAME],
+                CONF_PASSWORD: user_input[CONF_PASSWORD],
+                CONF_RTSP_PORT: user_input[CONF_RTSP_PORT],
+            }
+
+            # Valida connessione
             try:
-                await _validate_connection(self.hass, user_input)
+                await _validate_connection(self.hass, conn_data)
             except Hi3510AuthError:
                 errors["base"] = "invalid_auth"
             except Hi3510ConnectionError:
                 errors["base"] = "cannot_connect"
             except Exception:
                 errors["base"] = "unknown"
-            else:
+
+            # Valida reti CIDR
+            if not errors:
+                import ipaddress
+                networks_str = user_input.get(CONF_ALLOWED_NETWORKS, DEFAULT_ALLOWED_NETWORKS)
+                for net in networks_str.split(","):
+                    net = net.strip()
+                    if not net:
+                        continue
+                    try:
+                        ipaddress.ip_network(net, strict=False)
+                    except ValueError:
+                        errors[CONF_ALLOWED_NETWORKS] = "invalid_network"
+                        break
+
+            if not errors:
+                # Salva connessione in data
                 self.hass.config_entries.async_update_entry(
-                    self._config_entry, data=user_input
+                    self._config_entry, data=conn_data
+                )
+                # Salva cache/security in options
+                options = dict(self._config_entry.options)
+                options[CONF_CACHE_RETENTION_DAYS] = user_input[CONF_CACHE_RETENTION_DAYS]
+                options[CONF_ALLOWED_NETWORKS] = networks_str
+                self.hass.config_entries.async_update_entry(
+                    self._config_entry, options=options
                 )
                 await self.hass.config_entries.async_reload(
                     self._config_entry.entry_id
@@ -374,6 +418,8 @@ class Hi3510OptionsFlow(OptionsFlow):
                 return self.async_create_entry(title="", data={})
 
         current = self._config_entry.data
+        opts = self._config_entry.options
+
         schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default=current.get(CONF_HOST, "")): str,
@@ -381,6 +427,14 @@ class Hi3510OptionsFlow(OptionsFlow):
                 vol.Required(CONF_USERNAME, default=current.get(CONF_USERNAME, DEFAULT_USERNAME)): str,
                 vol.Required(CONF_PASSWORD, default=current.get(CONF_PASSWORD, "")): str,
                 vol.Required(CONF_RTSP_PORT, default=current.get(CONF_RTSP_PORT, DEFAULT_RTSP_PORT)): int,
+                vol.Required(
+                    CONF_CACHE_RETENTION_DAYS,
+                    default=opts.get(CONF_CACHE_RETENTION_DAYS, CACHE_MAX_AGE_DAYS),
+                ): vol.All(int, vol.Range(min=1, max=365)),
+                vol.Required(
+                    CONF_ALLOWED_NETWORKS,
+                    default=opts.get(CONF_ALLOWED_NETWORKS, DEFAULT_ALLOWED_NETWORKS),
+                ): str,
             }
         )
 
@@ -389,3 +443,4 @@ class Hi3510OptionsFlow(OptionsFlow):
             data_schema=schema,
             errors=errors,
         )
+

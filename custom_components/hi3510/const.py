@@ -74,3 +74,12 @@ SD_STATUS_MAP: dict[str, str] = {
     "1": "ok",
     "2": "error",
 }
+
+# Cache playback SD
+CACHE_DIR = "hi3510_cache"
+CACHE_MAX_AGE_DAYS = 7  # Default: file cache più vecchi di N giorni vengono eliminati
+
+# Options keys
+CONF_CACHE_RETENTION_DAYS = "cache_retention_days"
+CONF_ALLOWED_NETWORKS = "allowed_networks"
+DEFAULT_ALLOWED_NETWORKS = "10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8"
