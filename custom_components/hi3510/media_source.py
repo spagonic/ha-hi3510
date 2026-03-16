@@ -225,7 +225,7 @@ class Hi3510MediaSource(MediaSource):
             except Exception:
                 continue
 
-            for filename in sorted(files):
+            for filename in sorted(files, key=lambda f: f[1:14] if len(f) > 14 else f):
                 # Solo file completati (no 999999 = in corso)
                 if "999999" in filename:
                     continue

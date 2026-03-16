@@ -110,6 +110,10 @@
       "osd_text_1": { "name": "OSD Text Region 1" }
     },
     "sensor": {
+      "ip_address": { "name": "IP Address" },
+      "firmware": { "name": "Firmware" },
+      "model": { "name": "Model" },
+      "last_boot": { "name": "Last Boot" },
       "sd_free_space": { "name": "SD Free Space" },
       "sd_total_space": { "name": "SD Total Space" },
       "sd_status": { "name": "SD Status" },

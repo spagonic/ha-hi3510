@@ -40,14 +40,14 @@ IR_MODE_LABELS = {
     "close": "Off",
 }
 
-# OSD position
-OSD_PLACE_MAP: dict[str, str] = {
-    "0": "Top Left",
-    "1": "Top Right",
-    "2": "Bottom Left",
-    "3": "Bottom Right",
-}
-OSD_PLACE_REVERSE: dict[str, str] = {v: k for k, v in OSD_PLACE_MAP.items()}
+# OSD position — derivata da place (top/bottom) + x (left/right)
+# La cam usa place per top/bottom e coordinate x per left/right
+OSD_POSITIONS = ["Top Left", "Top Right", "Bottom Left", "Bottom Right"]
+OSD_X_THRESHOLD = 480  # x >= threshold = Right, x < threshold = Left
+OSD_X_RIGHT = 976  # valore x per posizionamento a destra
+OSD_X_LEFT = 0  # valore x per posizionamento a sinistra
+OSD_PLACE_TOP = "0"  # valore place per top
+OSD_PLACE_BOTTOM = "2"  # valore place per bottom
 
 # PTZ
 PTZ_ACTIONS = [

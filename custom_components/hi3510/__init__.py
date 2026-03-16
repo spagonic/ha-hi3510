@@ -13,6 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import Hi3510ApiClient, Hi3510AuthError, Hi3510ConnectionError
 from .const import CONF_RTSP_PORT, DOMAIN, PLATFORMS
 from .coordinator import Hi3510DataCoordinator, Hi3510MotionCoordinator
+from .sd_browser import Hi3510SdBrowserView, Hi3510SdCacheStatsView, Hi3510SdClearView, Hi3510SdDownloadView, Hi3510SdHubView, Hi3510SdIndexView, Hi3510SdMergeView, Hi3510SdMonthView
 from .views import Hi3510CacheBrowserView, Hi3510CacheFileView, Hi3510CacheHubView, Hi3510PlaybackView, cleanup_cache
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,6 +66,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: Hi3510ConfigEntry) -> bo
         hass.http.register_view(Hi3510CacheHubView(hass))
         hass.http.register_view(Hi3510CacheBrowserView(hass))
         hass.http.register_view(Hi3510CacheFileView(hass))
+        hass.http.register_view(Hi3510SdHubView(hass))
+        hass.http.register_view(Hi3510SdBrowserView(hass))
+        hass.http.register_view(Hi3510SdIndexView(hass))
+        hass.http.register_view(Hi3510SdMonthView(hass))
+        hass.http.register_view(Hi3510SdCacheStatsView(hass))
+        hass.http.register_view(Hi3510SdMergeView(hass))
+        hass.http.register_view(Hi3510SdDownloadView(hass))
+        hass.http.register_view(Hi3510SdClearView(hass))
         hass.data[DOMAIN]["_view_registered"] = True
         # Pulizia cache vecchia all'avvio
         await hass.async_add_executor_job(cleanup_cache, hass)

@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback,
 ) -> None:
     data = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
@@ -31,7 +31,7 @@ class Hi3510Camera(Camera):
     """Camera entity con RTSP streaming e snapshot."""
 
     _attr_has_entity_name = True
-    _attr_name = None  # usa il nome del device
+    _attr_name = None
     _attr_supported_features = CameraEntityFeature.STREAM
 
     def __init__(
@@ -45,8 +45,6 @@ class Hi3510Camera(Camera):
         self._api = api
         self._entry = entry
         self._attr_unique_id = f"{entry.unique_id}_camera"
-
-        # Costruisci URL RTSP
         user = entry.data[CONF_USERNAME]
         password = entry.data[CONF_PASSWORD]
         host = entry.data[CONF_HOST]
@@ -73,7 +71,7 @@ class Hi3510Camera(Camera):
         return self._stream_url
 
     async def async_camera_image(
-        self, width: int | None = None, height: int | None = None
+        self, width: int | None = None, height: int | None = None,
     ) -> bytes | None:
         try:
             return await self._api.get_snapshot()

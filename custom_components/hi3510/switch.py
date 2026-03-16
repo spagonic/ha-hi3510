@@ -7,6 +7,7 @@ from typing import Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -33,6 +34,7 @@ SWITCH_DESCRIPTIONS: list[Hi3510SwitchDescription] = [
         key="onvif",
         translation_key="onvif",
         icon="mdi:video-wireless",
+        entity_category=EntityCategory.CONFIG,
         data_key="onvif",
         value_key="ov_enable",
         set_fn_name="set_onvif_attr",
@@ -53,6 +55,7 @@ SWITCH_DESCRIPTIONS: list[Hi3510SwitchDescription] = [
         key="flip",
         translation_key="flip",
         icon="mdi:flip-vertical",
+        entity_category=EntityCategory.CONFIG,
         data_key="image_attr",
         value_key="flip",
         set_fn_name="set_image_attr",
@@ -63,6 +66,7 @@ SWITCH_DESCRIPTIONS: list[Hi3510SwitchDescription] = [
         key="mirror",
         translation_key="mirror",
         icon="mdi:flip-horizontal",
+        entity_category=EntityCategory.CONFIG,
         data_key="image_attr",
         value_key="mirror",
         set_fn_name="set_image_attr",
@@ -79,6 +83,7 @@ for _region in range(2):
             key=f"osd_region_{_region}",
             translation_key=f"osd_region_{_region}",
             icon=_osd_icons[_region],
+            entity_category=EntityCategory.CONFIG,
             data_key=f"osd_{_region}",
             value_key=f"show_{_region}",
             set_fn_name="_set_osd_show",

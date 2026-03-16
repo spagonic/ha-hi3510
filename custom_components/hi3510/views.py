@@ -510,7 +510,7 @@ class Hi3510CacheBrowserView(HomeAssistantView):
             result: list[dict] = []
             if not cache_dir.exists():
                 return result
-            for f in sorted(cache_dir.iterdir(), reverse=True):
+            for f in sorted(cache_dir.iterdir(), key=lambda p: p.name[28:41] if len(p.name) > 41 else p.name, reverse=True):
                 if f.suffix == ".mp4" and f.name.startswith(prefix):
                     stat = f.stat()
                     orig = f.stem[len(prefix):]
@@ -716,7 +716,7 @@ function showDay(day) {{
   const target = ym + dd;
 
   const dayFiles = FILES.filter(f => f.date === target);
-  dayFiles.sort((a, b) => a.name.localeCompare(b.name));
+  dayFiles.sort((a, b) => a.name.substring(1).localeCompare(b.name.substring(1)));
 
   const dayLabel = document.getElementById('day-label');
   dayLabel.textContent = day + ' ' + MONTHS_IT[curMonth] + ' ' + curYear + ' — ' + dayFiles.length + ' video';

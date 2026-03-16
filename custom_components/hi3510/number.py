@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -40,6 +41,7 @@ for _param, (_min, _max, _step) in IMAGE_NUMBER_PARAMS.items():
             key=_param,
             translation_key=_param,
             icon=_IMAGE_ICONS.get(_param),
+            entity_category=EntityCategory.CONFIG,
             native_min_value=_min,
             native_max_value=_max,
             native_step=_step,
@@ -56,6 +58,7 @@ NUMBER_DESCRIPTIONS.extend([
         key="audio_in_volume",
         translation_key="audio_in_volume",
         icon="mdi:microphone",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=0,
         native_max_value=100,
         native_step=1,
@@ -68,6 +71,7 @@ NUMBER_DESCRIPTIONS.extend([
         key="audio_out_volume",
         translation_key="audio_out_volume",
         icon="mdi:volume-high",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=0,
         native_max_value=100,
         native_step=1,

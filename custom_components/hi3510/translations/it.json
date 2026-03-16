@@ -110,6 +110,10 @@
       "osd_text_1": { "name": "Testo OSD Nome Camera" }
     },
     "sensor": {
+      "ip_address": { "name": "Indirizzo IP" },
+      "firmware": { "name": "Firmware" },
+      "model": { "name": "Modello" },
+      "last_boot": { "name": "Ultimo Avvio" },
       "sd_free_space": { "name": "Spazio Libero SD" },
       "sd_total_space": { "name": "Spazio Totale SD" },
       "sd_status": { "name": "Stato SD" },

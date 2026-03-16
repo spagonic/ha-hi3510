@@ -31,6 +31,34 @@ class Hi3510SensorDescription(SensorEntityDescription):
 
 SENSOR_DESCRIPTIONS: list[Hi3510SensorDescription] = [
     Hi3510SensorDescription(
+        key="ip_address",
+        translation_key="ip_address",
+        icon="mdi:ip-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_key="ip",
+    ),
+    Hi3510SensorDescription(
+        key="firmware",
+        translation_key="firmware",
+        icon="mdi:chip",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_key="softVersion",
+    ),
+    Hi3510SensorDescription(
+        key="model",
+        translation_key="model",
+        icon="mdi:camera",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_key="model",
+    ),
+    Hi3510SensorDescription(
+        key="last_boot",
+        translation_key="last_boot",
+        icon="mdi:clock-start",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_key="startdate",
+    ),
+    Hi3510SensorDescription(
         key="sd_free_space",
         translation_key="sd_free_space",
         icon="mdi:micro-sd",
@@ -102,6 +130,9 @@ class Hi3510Sensor(CoordinatorEntity[Hi3510DataCoordinator], SensorEntity):
             return None
         desc = self.entity_description
         val = info.get(desc.value_key)
+        # IP: fallback a host dal config entry
+        if val is None and desc.value_key == "ip":
+            val = self._entry.data.get("host")
         if val is None:
             return None
         if desc.is_space:

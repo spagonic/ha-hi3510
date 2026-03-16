@@ -175,11 +175,15 @@ All image parameters are sent together to prevent firmware from resetting unspec
 
 ### Sensors
 
-| Entity | Description |
-|---|---|
-| SD Free Space | Available SD space in MB |
-| SD Total Space | Total SD capacity in MB |
-| SD Status | OK / Not Inserted / Error |
+| Entity | Category | Description |
+|---|---|---|
+| IP Address | Diagnostic | Camera's IP address (falls back to configured host) |
+| Firmware | Diagnostic | Firmware version string |
+| Model | Diagnostic | Camera model code |
+| Last Boot | Diagnostic | Last reboot date/time |
+| SD Free Space | Diagnostic | Available SD space in MB |
+| SD Total Space | Diagnostic | Total SD capacity in MB |
+| SD Status | Diagnostic | OK / Not Inserted / Error |
 
 ## Setup
 
@@ -200,44 +204,68 @@ Configure integration options without removing the camera:
 
 ### SD Card Recording Playback
 
-Browse and play back SD card recordings directly from Home Assistant:
+Browse and play back SD card recordings directly from Home Assistant. Two interfaces are available:
 
-- **Cache browser** at `/api/hi3510/cache` — grid view of all cameras with video count per month
-- **Per-camera view** with calendar navigation — days with recordings are highlighted
-- Click a day to see the video list, click a video to play it inline with full seek support
+#### SD Browser (recommended)
+
+The SD Browser is a full-featured recording manager accessible at `/api/hi3510/sd`. It provides:
+
+- **Camera hub**: grid of all cameras, click to enter per-camera view
+- **Sidebar with months**: lists all months that have recordings on SD or in cache, with badge counts (💾 cached, 🔗 merged)
+- **Interactive calendar**: click a month to see a calendar; days with recordings are highlighted with file counts
+- **File list with filters**: view all files for a day, filter by type (alarm 🔴 / recording 📹 / merged 🔗 / cached 💾)
+- **Click-to-play**: click any file to play it inline. If not yet cached, it downloads from SD, converts HXVS→MP4, and plays automatically
+- **Merge recordings**: select multiple files (checkbox + range select) and merge them into a single continuous video
+- **Merge tracking**: files used in a merge are marked with "✓ unito" badge; merged videos appear at the top with time range labels
+- **Cache management**: "Svuota cache" button to clear all cached files for a camera
+- **Live counters**: shows cached/total files, merged count, and used-in-merge count per day
+
+##### How to embed the SD Browser in a dashboard
+
+```yaml
+type: iframe
+url: /api/hi3510/sd
+aspect_ratio: 100%
+```
+
+To show only specific cameras:
+
+```yaml
+type: iframe
+url: /api/hi3510/sd?entries=<entry_id_1>,<entry_id_2>
+aspect_ratio: 100%
+```
+
+##### SD Browser workflow example
+
+1. Open the SD Browser tab in your dashboard
+2. Click on a camera from the hub grid
+3. Select a month from the sidebar → the calendar shows days with recordings
+4. Click a day → the file list loads with all recordings
+5. Click a file → it downloads from SD, converts to MP4, and plays inline
+6. To create a compilation: check multiple files → click "🔗 Unisci" → a merged video is created
+7. Use filters to quickly find alarm events or already-cached files
+
+#### Legacy Cache Browser
+
+The original cache browser at `/api/hi3510/cache` is still available but offers fewer features (no merge, no single-file download, no filters). The SD Browser supersedes it for all use cases.
+
+#### Cache browser access
+
+Both interfaces support:
+
+- **Direct URL**: navigate to `http://<your-ha>:8123/api/hi3510/sd` from any browser on your local network
+- **Dashboard embed**: add an `iframe` card (see examples above)
+- **Media browser**: open the HA media browser panel and select **Hi3510 IP Camera** to browse recordings per camera
 - Supports H.264 recordings (HXVS container format). H.265 (HXVT) files are parsed but not playable in the browser
 - Recordings are downloaded from the camera, remuxed to MP4 via ffmpeg, and cached locally
 - Cache auto-cleanup based on configurable retention period
 - Filterable by camera group via `?entries=id1,id2,id3` URL parameter
 - IP-based access control (no auth token required from allowed networks)
 
-#### How to access the cache browser
+#### Example: NVR-style dashboard with live view and SD browser
 
-**Option 1 — Direct URL**: navigate to `http://<your-ha>:8123/api/hi3510/cache` from any browser on your local network.
-
-**Option 2 — Embed in a dashboard**: add an `iframe` card to any Lovelace dashboard:
-
-```yaml
-type: iframe
-url: /api/hi3510/cache
-aspect_ratio: 100%
-```
-
-To show only specific cameras, filter by entry ID:
-
-```yaml
-type: iframe
-url: /api/hi3510/cache?entries=<entry_id_1>,<entry_id_2>
-aspect_ratio: 100%
-```
-
-You can find entry IDs in **Settings → Devices & Services → Hi3510 IP Camera** (click on a device, the entry ID is in the URL).
-
-**Option 3 — Media browser**: open the HA media browser panel and select **Hi3510 IP Camera** to browse recordings per camera.
-
-#### Example: NVR-style dashboard with live view and recordings
-
-You can create a full NVR experience by combining a live camera card with the cache browser in a tabbed dashboard. Here's an example using [advanced-camera-card](https://github.com/dermotduffy/advanced-camera-card) and go2rtc:
+You can create a full NVR experience by combining a live camera card with the SD browser in a tabbed dashboard. Here's an example using [advanced-camera-card](https://github.com/dermotduffy/advanced-camera-card) and go2rtc:
 
 ```yaml
 # Tab 1: Live View (requires advanced-camera-card + go2rtc)
@@ -292,6 +320,11 @@ views:
           auto_play:
             - selected
             - visible
+          auto_mute:
+            - unselected
+            - hidden
+          auto_unmute:
+            - selected
           lazy_load: true
           draggable: false
           controls:
@@ -311,6 +344,13 @@ views:
             fullscreen:
               enabled: true
               alignment: opposing
+            mute:
+              enabled: true
+              priority: 35
+            microphone:
+              enabled: true
+              priority: 34
+              type: toggle
         status_bar:
           style: overlay
           position: bottom
@@ -328,18 +368,44 @@ views:
           aspect_ratio_mode: unconstrained
           height: calc(100vh - 56px)
 
-  # Tab 2: Recordings (cache browser embedded via iframe)
-  - title: Recordings
-    path: recordings
-    icon: mdi:filmstrip-box-multiple
+  # Tab 2: SD Browser (recording management)
+  - title: SD Browser
+    path: sd-browser
+    icon: mdi:sd
     type: panel
     cards:
       - type: iframe
-        url: /api/hi3510/cache
+        url: /api/hi3510/sd
         aspect_ratio: 100%
 ```
 
-This gives you a two-tab dashboard: the first tab shows a live grid of all cameras with SD/HD substream switching, the second tab embeds the cache browser for recording playback with calendar navigation.
+This gives you a two-tab dashboard: the first tab shows a live grid of all cameras with SD/HD substream switching and audio controls, the second tab embeds the SD browser for full recording management with calendar navigation, download, merge, and playback.
+
+##### Audio in the live view
+
+When using `advanced-camera-card` with `webrtc-card` provider and go2rtc streams that include audio:
+
+- Audio plays automatically when you select a camera (thanks to `auto_unmute: [selected]`)
+- The `mute` button in the menu bar toggles audio on/off for the selected camera
+- The `microphone` button enables two-way audio (requires go2rtc with backchannel support)
+- Make sure `auto_mute` does NOT include `microphone` — only `unselected` and `hidden`
+
+```yaml
+# Audio configuration summary
+live:
+  auto_mute:
+    - unselected    # mute when camera is not selected
+    - hidden        # mute when camera is hidden
+  auto_unmute:
+    - selected      # unmute when camera is selected
+menu:
+  buttons:
+    mute:
+      enabled: true       # toggle audio on/off
+    microphone:
+      enabled: true       # two-way audio (hold or toggle)
+      type: toggle        # toggle mode instead of push-to-talk
+```
 
 ### Media Source
 
@@ -387,6 +453,23 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 - Italian
 
 ## Changelog
+
+### 1.4.0
+
+- **SD Browser**: new full-featured recording manager at `/api/hi3510/sd` with:
+  - Camera hub grid with per-camera entry
+  - Month sidebar with cache/merge badge counts
+  - Interactive calendar with per-day file counts
+  - File list with filters (alarm / recording / merged / cached)
+  - Click-to-download-and-play: click any SD file to download, convert HXVS→MP4, and play inline
+  - Multi-file merge: select files and merge into a single continuous video
+  - Merge tracking: "✓ unito" badges on source files, merged videos with time range labels
+  - Cache management: clear all cached files per camera
+  - Live counters per day (cached, merged, used-in-merge)
+- **New diagnostic sensors**: IP address, firmware version, model code, last boot time
+- **OSD position fix**: position now correctly derived from `place` + `x` coordinate (was using only `place`, which mapped incorrectly on some firmware)
+- **Entity categories**: infrared mode and OSD position selects now categorized as `EntityCategory.CONFIG`
+- **Entity categories**: reboot button, image parameters, audio volumes, OSD text now have proper entity categories
 
 ### 1.3.0
 
