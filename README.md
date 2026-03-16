@@ -454,6 +454,10 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 
 ## Changelog
 
+### 1.4.1
+
+- **Minimum HA version**: added `homeassistant` requirement (`2024.2.0`) in both `manifest.json` and `hacs.json` — prevents installation on incompatible versions (Python 3.12 `type` alias syntax required)
+
 ### 1.4.0
 
 - **SD Browser**: new full-featured recording manager at `/api/hi3510/sd` with:
