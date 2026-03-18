@@ -8,7 +8,10 @@ Formato container:
   - HXVT magic → H.265 (.265 files) — riconosciuto ma non supportato per playback
   - Frame video: header HXVF (16 bytes) + payload NAL
     HXVF layout: [4B magic][4B payload_size][4B timestamp_ms][4B frame_num]
-  - Frame audio: header HXAF + payload
+  - Frame audio: header HXAF (16 bytes) + 4B sub-header + G.711 a-law payload
+    HXAF layout: [4B magic][4B payload_size][4B timestamp_ms][4B reserved]
+    Sub-header: [00 01 50 00] (stripped before muxing)
+    Audio: G.711 a-law, 8kHz, mono, 160 bytes/frame (20ms)
   - NAL units dentro i frame video, preceduti da start code 00 00 00 01
 
 NAL types mantenuti (H.264):
@@ -34,6 +37,8 @@ _TS_PACKET_SIZE = 188
 _PAT_PID = 0x0000
 _PMT_PID = 0x1000
 _VIDEO_PID = 0x0100
+_AUDIO_PID = 0x0101
+_HXAF_HEADER_SIZE = 4  # sub-header nei frame audio (00 01 50 00)
 
 
 def _crc32_mpeg(data: bytes) -> int:
@@ -131,11 +136,12 @@ def _write_ts_packets(
         first = False
 
 
-def _parse_container(data: bytes) -> tuple[bool, str, frozenset, list[tuple[int, int, int]]]:
-    """Parsa header container e trova tutti gli HXVF.
+def _parse_container(data: bytes) -> tuple[bool, str, frozenset, list[tuple[int, int, int]], list[tuple[int, int, int]]]:
+    """Parsa header container e trova tutti gli HXVF e HXAF.
 
     Returns:
-        (is_h265, codec, keep_set, hxvf_list)
+        (is_h265, codec, keep_set, hxvf_list, hxaf_list)
+        hxaf_list: [(offset, payload_size, timestamp_ms), ...]
     """
     magic = data[:4]
     if magic == b"HXVS":
@@ -162,7 +168,21 @@ def _parse_container(data: bytes) -> tuple[bool, str, frozenset, list[tuple[int,
         hxvf_list.append((pos, psize, ts_ms))
         pos += 4
 
-    return is_h265, codec, keep, hxvf_list
+    # Estrai frame audio HXAF
+    hxaf_list: list[tuple[int, int, int]] = []
+    pos = 0
+    while pos < data_len - 16:
+        pos = data.find(b"HXAF", pos)
+        if pos == -1:
+            break
+        if pos + 16 > data_len:
+            break
+        psize = struct.unpack_from("<I", data, pos + 4)[0]
+        ts_ms = struct.unpack_from("<I", data, pos + 8)[0]
+        hxaf_list.append((pos, psize, ts_ms))
+        pos += 16 + max(psize, 1)
+
+    return is_h265, codec, keep, hxvf_list, hxaf_list
 
 
 def _extract_frames(
@@ -241,26 +261,39 @@ def _extract_frames(
     return frames
 
 
-def hxvs_to_mpegts(data: bytes) -> tuple[bytes, int, str]:
-    """Converte un file HXVS/HXVT in MPEG-TS con PTS reali.
+def hxvs_to_mpegts(data: bytes) -> tuple[bytes, int, str, bytes]:
+    """Converte un file HXVS/HXVT in MPEG-TS (solo video) + audio raw separato.
 
     Per H.264: genera MPEG-TS con PES/PTS per remux ``ffmpeg -c copy``.
     Per H.265: ritorna codec="h265" con dati vuoti (non supportato).
 
+    Audio G.711 a-law viene estratto come raw bytes separato (8kHz mono).
+    Il chiamante deve passarlo a ffmpeg come secondo input:
+    ``ffmpeg -f mpegts -i video.ts -f alaw -ar 8000 -ac 1 -i audio.raw ...``
+
     Returns:
-        Tupla (output_bytes, frame_count, codec_string).
+        Tupla (ts_bytes, frame_count, codec_string, audio_raw_alaw).
+        audio_raw_alaw è vuoto (b"") se non ci sono frame audio.
     """
-    is_h265, codec, keep, hxvf_list = _parse_container(data)
+    is_h265, codec, keep, hxvf_list, hxaf_list = _parse_container(data)
 
     # H.265 non supportato per playback — ritorna subito il codec
     # per permettere a views.py di mostrare il messaggio appropriato
     if is_h265:
-        return b"", 0, codec
+        return b"", 0, codec, b""
 
     frames = _extract_frames(data, is_h265, keep, hxvf_list)
-    stream_type = 0x1B  # H.264
 
-    # === Scrivi MPEG-TS ===
+    # Estrai payload audio raw (strip 4-byte sub-header, concatena in ordine)
+    audio_raw = bytearray()
+    if hxaf_list:
+        for apos, apsize, _ats_ms in hxaf_list:
+            payload_start = apos + 16 + _HXAF_HEADER_SIZE
+            payload_end = apos + 16 + apsize
+            if payload_start < payload_end <= len(data):
+                audio_raw.extend(data[payload_start:payload_end])
+
+    # === Scrivi MPEG-TS (solo video) ===
     out = bytearray()
     cc_pat: list[int] = [0]
     cc_pmt: list[int] = [0]
@@ -281,7 +314,8 @@ def hxvs_to_mpegts(data: bytes) -> tuple[bytes, int, str]:
     _write_ts_packets(out, _PAT_PID, cc_pat,
                       bytes(bytearray([0x00]) + pat_sec), pusi=True)
 
-    # PMT (Program Map Table)
+    # PMT (Program Map Table) — solo video
+    stream_type = 0x1B  # H.264
     pmt_sec = bytearray([0x02])  # table_id
     pmt_body = bytearray()
     pmt_body.extend(b'\x00\x01')  # program_number
@@ -301,7 +335,6 @@ def hxvs_to_mpegts(data: bytes) -> tuple[bytes, int, str]:
 
     # Frame video come PES con PTS
     base_ts = frames[0][0]
-
     for ts_ms, nal_data, is_kf in frames:
         pts_90k = (ts_ms - base_ts) * 90  # ms → 90kHz clock
 
@@ -326,7 +359,8 @@ def hxvs_to_mpegts(data: bytes) -> tuple[bytes, int, str]:
                           adapt_flags=af, pcr=pcr)
 
     _LOGGER.debug(
-        "HXVS→MPEG-TS: %d bytes input → %d bytes output, %d frames, codec=%s",
-        len(data), len(out), len(frames), codec,
+        "HXVS→MPEG-TS: %d bytes input → %d bytes output, %d video frames, "
+        "%d audio frames (%d bytes raw alaw), codec=%s",
+        len(data), len(out), len(frames), len(hxaf_list), len(audio_raw), codec,
     )
-    return bytes(out), len(frames), codec
+    return bytes(out), len(frames), codec, bytes(audio_raw)

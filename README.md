@@ -275,7 +275,7 @@ Both interfaces support:
 - **Direct URL**: navigate to `http://<your-ha>:8123/api/hi3510/sd` from any browser on your local network
 - **Dashboard embed**: add an `iframe` card (see examples above)
 - **Media browser**: open the HA media browser panel and select **Hi3510 IP Camera** to browse recordings per camera
-- Supports H.264 recordings (HXVS container format). H.265 (HXVT) files are parsed but not playable in the browser
+- Supports H.264 recordings (HXVS container format) with audio (G.711 a-law → AAC). H.265 (HXVT) files are parsed but not playable in the browser
 - Recordings are downloaded from the camera, remuxed to MP4 via ffmpeg, and cached locally
 - Cache auto-cleanup based on configurable retention period
 - Filterable by HA area (`?area=`), host substring (`?host=`), or entry IDs (`?entries=`)
@@ -471,6 +471,12 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 - Italian
 
 ## Changelog
+
+### 1.5.0
+
+- **Audio in SD recordings**: SD card recordings now include audio. The HXVS parser extracts G.711 a-law audio frames from the proprietary container, and ffmpeg transcodes them to AAC during the HXVS→MP4 conversion. Both single-file downloads and multi-file merges produce MP4 files with synchronized audio+video
+- **Audio format**: G.711 a-law, 8kHz mono, 160 bytes/frame (20ms) — transcoded to AAC 64kbps for browser compatibility
+- **Backward compatible**: recordings from cameras without audio (or with audio disabled) continue to work as before — the parser gracefully handles files with no HXAF frames
 
 ### 1.4.3
 

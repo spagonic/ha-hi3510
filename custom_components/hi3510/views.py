@@ -280,7 +280,7 @@ class Hi3510PlaybackView(HomeAssistantView):
 
         self._notify(notif_id, f"🔄 Conversione: {short_name} ({raw_mb:.1f} MB)...", "Hi3510 Playback")
         try:
-            ts_data, frame_count, codec = await self.hass.async_add_executor_job(
+            ts_data, frame_count, codec, audio_raw = await self.hass.async_add_executor_job(
                 hxvs_to_mpegts, raw_data
             )
         except ValueError as err:
@@ -304,7 +304,7 @@ class Hi3510PlaybackView(HomeAssistantView):
 
         self._notify(notif_id, f"🎬 Remux ffmpeg: {short_name} ({frame_count} frames)...", "Hi3510 Playback")
         try:
-            mp4_data = await self._ffmpeg_remux(ts_data, codec)
+            mp4_data = await self._ffmpeg_remux(ts_data, codec, audio_raw)
         except Exception as err:
             self._dismiss(notif_id)
             _LOGGER.error("ffmpeg fallito %s: %s", filename, err)
@@ -325,14 +325,28 @@ class Hi3510PlaybackView(HomeAssistantView):
     def _dismiss(self, notif_id: str) -> None:
         pn.async_dismiss(self.hass, notif_id)
 
-    async def _ffmpeg_remux(self, ts_data: bytes, codec: str) -> bytes:
-        """Remux MPEG-TS H.264 in MP4."""
+    async def _ffmpeg_remux(self, ts_data: bytes, codec: str, audio_raw: bytes = b"") -> bytes:
+        """Remux MPEG-TS H.264 in MP4, con audio G.711 a-law se presente."""
         with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as tmp_in:
             tmp_in.write(ts_data)
             input_path = tmp_in.name
 
+        audio_path = None
+        if audio_raw:
+            with tempfile.NamedTemporaryFile(suffix=".alaw", delete=False) as tmp_aud:
+                tmp_aud.write(audio_raw)
+                audio_path = tmp_aud.name
+
         output_path = input_path.rsplit(".", 1)[0] + ".mp4"
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-c", "copy", "-movflags", "+faststart", output_path]
+        cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
+        if audio_path:
+            cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+        cmd.extend(["-c:v", "copy"])
+        if audio_path:
+            cmd.extend(["-c:a", "aac", "-b:a", "64k"])
+        else:
+            cmd.append("-an")
+        cmd.extend(["-movflags", "+faststart", output_path])
 
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -344,11 +358,12 @@ class Hi3510PlaybackView(HomeAssistantView):
             mp4_data = await self.hass.async_add_executor_job(Path(output_path).read_bytes)
             return mp4_data
         finally:
-            for p in (input_path, output_path):
-                try:
-                    Path(p).unlink(missing_ok=True)
-                except OSError:
-                    pass
+            for p in (input_path, output_path, audio_path):
+                if p:
+                    try:
+                        Path(p).unlink(missing_ok=True)
+                    except OSError:
+                        pass
 
     async def _serve_file(self, request: web.Request, file_path: Path) -> web.StreamResponse:
         stat = file_path.stat()

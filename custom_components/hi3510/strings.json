@@ -84,8 +84,8 @@
       "recording": { "name": "SD Recording" },
       "flip": { "name": "Flip" },
       "mirror": { "name": "Mirror" },
-      "osd_region_0": { "name": "OSD Region 0" },
-      "osd_region_1": { "name": "OSD Region 1" }
+      "osd_region_0": { "name": "OSD Timestamp" },
+      "osd_region_1": { "name": "OSD Camera Name" }
     },
     "select": {
       "infrared": { "name": "Infrared Mode" },

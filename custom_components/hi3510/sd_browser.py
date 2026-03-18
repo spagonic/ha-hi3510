@@ -854,14 +854,14 @@ class Hi3510SdMergeView(HomeAssistantView):
                     continue
                 pn.async_create(self.hass, f"Conversione {i+1}/{total}: {fname}...", "Hi3510 SD Merge", notif_id)
                 try:
-                    ts_data, frame_count, codec = await self.hass.async_add_executor_job(hxvs_to_mpegts, raw_data)
+                    ts_data, frame_count, codec, audio_raw = await self.hass.async_add_executor_job(hxvs_to_mpegts, raw_data)
                 except ValueError as err:
                     _LOGGER.error("Merge parse fallito %s: %s", fname, err)
                     continue
                 if codec == "h265" or frame_count == 0:
                     continue
                 try:
-                    mp4_data = await self._ffmpeg_remux(ts_data)
+                    mp4_data = await self._ffmpeg_remux(ts_data, audio_raw)
                 except Exception as err:
                     _LOGGER.error("Merge remux fallito %s: %s", fname, err)
                     continue
@@ -886,12 +886,25 @@ class Hi3510SdMergeView(HomeAssistantView):
             _LOGGER.exception("Merge error: %s", err)
             pn.async_create(self.hass, f"Errore merge: {err}", "Hi3510 SD Merge", notif_id)
 
-    async def _ffmpeg_remux(self, ts_data: bytes) -> bytes:
+    async def _ffmpeg_remux(self, ts_data: bytes, audio_raw: bytes = b"") -> bytes:
         with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as tmp_in:
             tmp_in.write(ts_data)
             input_path = tmp_in.name
+        audio_path = None
+        if audio_raw:
+            with tempfile.NamedTemporaryFile(suffix=".alaw", delete=False) as tmp_aud:
+                tmp_aud.write(audio_raw)
+                audio_path = tmp_aud.name
         output_path = input_path.rsplit(".", 1)[0] + ".mp4"
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-c", "copy", "-movflags", "+faststart", output_path]
+        cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
+        if audio_path:
+            cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+        cmd.extend(["-c:v", "copy"])
+        if audio_path:
+            cmd.extend(["-c:a", "aac", "-b:a", "64k"])
+        else:
+            cmd.append("-an")
+        cmd.extend(["-movflags", "+faststart", output_path])
         try:
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
             _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
@@ -899,11 +912,12 @@ class Hi3510SdMergeView(HomeAssistantView):
                 raise RuntimeError(f"ffmpeg exit {proc.returncode}: {stderr.decode(errors='replace')[-300:]}")
             return await self.hass.async_add_executor_job(Path(output_path).read_bytes)
         finally:
-            for p in (input_path, output_path):
-                try:
-                    Path(p).unlink(missing_ok=True)
-                except OSError:
-                    pass
+            for p in (input_path, output_path, audio_path):
+                if p:
+                    try:
+                        Path(p).unlink(missing_ok=True)
+                    except OSError:
+                        pass
 
     async def _ffmpeg_concat(self, mp4_paths: list[Path], entry_id: str, files: list[dict]) -> Path | None:
         first_name = files[0]["name"]
@@ -972,7 +986,7 @@ class Hi3510SdDownloadView(HomeAssistantView):
         if len(raw_data) < 100:
             return web.json_response({"error": "File troppo piccolo"}, status=502)
         try:
-            ts_data, frame_count, codec = await self.hass.async_add_executor_job(hxvs_to_mpegts, raw_data)
+            ts_data, frame_count, codec, audio_raw = await self.hass.async_add_executor_job(hxvs_to_mpegts, raw_data)
         except ValueError as err:
             return web.json_response({"error": f"Formato non supportato: {err}"}, status=422)
         if codec == "h265":
@@ -980,18 +994,31 @@ class Hi3510SdDownloadView(HomeAssistantView):
         if frame_count == 0:
             return web.json_response({"error": "Nessun frame video"}, status=422)
         try:
-            mp4_data = await self._ffmpeg_remux(ts_data)
+            mp4_data = await self._ffmpeg_remux(ts_data, audio_raw)
         except Exception as err:
             return web.json_response({"error": f"Conversione fallita: {err}"}, status=500)
         await self.hass.async_add_executor_job(mp4_file.write_bytes, mp4_data)
         return web.json_response({"ok": True, "cached": False, "size": len(mp4_data)})
 
-    async def _ffmpeg_remux(self, ts_data: bytes) -> bytes:
+    async def _ffmpeg_remux(self, ts_data: bytes, audio_raw: bytes = b"") -> bytes:
         with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as tmp_in:
             tmp_in.write(ts_data)
             input_path = tmp_in.name
+        audio_path = None
+        if audio_raw:
+            with tempfile.NamedTemporaryFile(suffix=".alaw", delete=False) as tmp_aud:
+                tmp_aud.write(audio_raw)
+                audio_path = tmp_aud.name
         output_path = input_path.rsplit(".", 1)[0] + ".mp4"
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-c", "copy", "-movflags", "+faststart", output_path]
+        cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
+        if audio_path:
+            cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+        cmd.extend(["-c:v", "copy"])
+        if audio_path:
+            cmd.extend(["-c:a", "aac", "-b:a", "64k"])
+        else:
+            cmd.append("-an")
+        cmd.extend(["-movflags", "+faststart", output_path])
         try:
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
             _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
@@ -999,11 +1026,12 @@ class Hi3510SdDownloadView(HomeAssistantView):
                 raise RuntimeError(f"ffmpeg exit {proc.returncode}: {stderr.decode(errors='replace')[-300:]}")
             return await self.hass.async_add_executor_job(Path(output_path).read_bytes)
         finally:
-            for p in (input_path, output_path):
-                try:
-                    Path(p).unlink(missing_ok=True)
-                except OSError:
-                    pass
+            for p in (input_path, output_path, audio_path):
+                if p:
+                    try:
+                        Path(p).unlink(missing_ok=True)
+                    except OSError:
+                        pass
 
 
 class Hi3510SdClearView(HomeAssistantView):
