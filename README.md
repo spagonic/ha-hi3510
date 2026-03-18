@@ -228,13 +228,31 @@ url: /api/hi3510/sd
 aspect_ratio: 100%
 ```
 
-To show only specific cameras:
+To show only cameras in a specific HA area (recommended — survives reinstallation):
+
+```yaml
+type: iframe
+url: /api/hi3510/sd?area=rieti
+aspect_ratio: 100%
+```
+
+To filter by host substring (e.g., all cameras on a specific hostname or IP range):
+
+```yaml
+type: iframe
+url: /api/hi3510/sd?host=192.168.1
+aspect_ratio: 100%
+```
+
+To show only specific cameras by entry ID:
 
 ```yaml
 type: iframe
 url: /api/hi3510/sd?entries=<entry_id_1>,<entry_id_2>
 aspect_ratio: 100%
 ```
+
+Filters can be combined: `?area=rieti&host=spare.dynu.com`
 
 ##### SD Browser workflow example
 
@@ -260,7 +278,7 @@ Both interfaces support:
 - Supports H.264 recordings (HXVS container format). H.265 (HXVT) files are parsed but not playable in the browser
 - Recordings are downloaded from the camera, remuxed to MP4 via ffmpeg, and cached locally
 - Cache auto-cleanup based on configurable retention period
-- Filterable by camera group via `?entries=id1,id2,id3` URL parameter
+- Filterable by HA area (`?area=`), host substring (`?host=`), or entry IDs (`?entries=`)
 - IP-based access control (no auth token required from allowed networks)
 
 #### Example: NVR-style dashboard with live view and SD browser
@@ -454,9 +472,20 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 
 ## Changelog
 
+### 1.4.3
+
+- **SD Browser area filter**: the hub view now supports `?area=<area_name>` to filter cameras by Home Assistant area — dashboard URLs survive integration reinstallation (no more hardcoded entry IDs)
+- **SD Browser host filter**: added `?host=<substring>` filter to show only cameras whose host contains the given string
+- **Hub title**: shows the area name in the page title when filtering by area (e.g., "SD Browser — Rieti")
+- **Filter preservation**: all filters (`area`, `host`, `entries`) are preserved in back-links when navigating to per-camera views
+
+### 1.4.2
+
+- **Version alignment**: fixed `manifest.json` version to match GitHub release tag (was stuck at 1.4.1)
+
 ### 1.4.1
 
-- **Minimum HA version**: added `homeassistant` requirement (`2024.2.0`) in both `manifest.json` and `hacs.json` — prevents installation on incompatible versions (Python 3.12 `type` alias syntax required)
+- **Minimum HA version**: added `homeassistant` requirement (`2024.2.0`) in `hacs.json` — prevents installation on incompatible versions (Python 3.12 `type` alias syntax required)
 
 ### 1.4.0
 

@@ -227,18 +227,59 @@ class Hi3510SdHubView(HomeAssistantView):
         entries_param = request.query.get("entries", "")
         if entries_param:
             entries_filter = {e.strip() for e in entries_param.split(",") if e.strip()}
+        host_filter = request.query.get("host", "").strip()
+        area_filter = request.query.get("area", "").strip().lower()
+        # Build set of entry_ids that belong to the requested area
+        area_entries: set[str] | None = None
+        if area_filter:
+            from homeassistant.helpers import area_registry as ar, device_registry as dr
+            area_reg = ar.async_get(self.hass)
+            dev_reg = dr.async_get(self.hass)
+            # Find area_id by name (case-insensitive)
+            target_area_id: str | None = None
+            for area in area_reg.async_list_areas():
+                if area.name.lower() == area_filter:
+                    target_area_id = area.id
+                    break
+            if target_area_id is None:
+                return web.Response(text=f"Area '{area_filter}' not found", status=HTTPStatus.NOT_FOUND)
+            # Collect entry_ids whose device is in this area
+            area_entries = set()
+            for entry_id in self.hass.data.get(DOMAIN, {}):
+                if not isinstance(self.hass.data[DOMAIN].get(entry_id), dict):
+                    continue
+                devices = dr.async_entries_for_config_entry(dev_reg, entry_id)
+                for dev in devices:
+                    if dev.area_id == target_area_id:
+                        area_entries.add(entry_id)
+                        break
         cams = []
         for entry_id, data in self.hass.data.get(DOMAIN, {}).items():
             if not isinstance(data, dict):
                 continue
             if entries_filter and entry_id not in entries_filter:
                 continue
+            if host_filter:
+                entry = self.hass.config_entries.async_get_entry(entry_id)
+                entry_host = entry.data.get("host", "") if entry else ""
+                if host_filter not in entry_host:
+                    continue
+            if area_entries is not None and entry_id not in area_entries:
+                continue
             cam_name = _get_cam_name(self.hass, entry_id)
             cached = await self.hass.async_add_executor_job(_cached_files_for_entry, self.hass, entry_id)
             merged = await self.hass.async_add_executor_job(_merged_files_for_entry, self.hass, entry_id)
             cams.append({"entry_id": entry_id, "name": cam_name, "cached": len(cached) + len(merged)})
         cams.sort(key=lambda c: c["name"].lower())
-        qs = f"?entries={entries_param}" if entries_param else ""
+        # Preserve filter in query string for sub-page back links
+        qs_parts = []
+        if entries_param:
+            qs_parts.append(f"entries={entries_param}")
+        if host_filter:
+            qs_parts.append(f"host={host_filter}")
+        if area_filter:
+            qs_parts.append(f"area={area_filter}")
+        qs = f"?{'&'.join(qs_parts)}" if qs_parts else ""
         import html as html_mod
         cards = ""
         for c in cams:
@@ -251,8 +292,9 @@ class Hi3510SdHubView(HomeAssistantView):
                 badge = '<div style="color:#666;font-size:0.8em;margin-top:4px">\u26aa nessun video</div>'
             cards += f'<div class="cam-card" onclick="location.href=\'{url}\'"><div class="cam-icon">\U0001f4f9</div><div class="cam-name">{ne}</div>{badge}</div>'
         css = _SD_CSS + _SD_CSS2
-        html = f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SD Browser</title><style>{css}</style></head><body>'
-        html += f'<div class="header"><div class="header-left"><h1>\U0001f4be SD Browser</h1><div class="subtitle">{len(cams)} camere</div></div></div>'
+        area_label = f" — {area_filter.title()}" if area_filter else ""
+        html = f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SD Browser{area_label}</title><style>{css}</style></head><body>'
+        html += f'<div class="header"><div class="header-left"><h1>\U0001f4be SD Browser{area_label}</h1><div class="subtitle">{len(cams)} camere</div></div></div>'
         html += f'<div class="grid">{cards if cards else chr(60)+"div class="+chr(34)+"empty"+chr(34)+chr(62)+"Nessuna camera Hi3510 configurata"+chr(60)+"/div"+chr(62)}</div></body></html>'
         return web.Response(text=html, content_type="text/html")
 
