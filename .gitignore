@@ -9,3 +9,6 @@ no_git/
 
 # Kiro workspace
 .kiro/
+
+# Task tracking (local only)
+tasks/
