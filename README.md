@@ -139,6 +139,7 @@ The config flow includes automatic network scanning:
 | Infrared Mode | Auto / On / Off |
 | OSD Timestamp Position | Top Left / Top Right / Bottom Left / Bottom Right |
 | OSD Name Position | Top Left / Top Right / Bottom Left / Bottom Right |
+| PTZ Preset | Go to preset position (1–16). Presets must be saved via the camera's web UI or the `hi3510.ptz_preset` service. |
 
 OSD position selects include anti-overlap validation.
 
@@ -159,13 +160,60 @@ All image parameters are sent together to prevent firmware from resetting unspec
 
 | Entity | Description |
 |---|---|
-| OSD Text Region 1 | Editable camera name overlay text. Region 0 (timestamp) is read-only. |
+| OSD Text Region 1 | Editable camera name overlay text (max 32 characters). Region 0 (timestamp) is read-only. |
+
+### PTZ Services
+
+Two services are available for automations and scripts:
+
+#### `hi3510.ptz_move`
+
+Move the camera in a direction or control zoom/focus/iris.
+
+```yaml
+service: hi3510.ptz_move
+data:
+  entry_id: "01KKXYNQ..."
+  action: left       # left, right, up, down, home, stop, leftup, leftdown, rightup, rightdown, hscan, vscan, zoomin, zoomout, focusin, focusout, irisin, irisout
+  speed: 1           # 0–4, default 1
+```
+
+#### `hi3510.ptz_preset`
+
+Go to or save a PTZ preset position.
+
+```yaml
+# Go to preset 3
+service: hi3510.ptz_preset
+data:
+  entry_id: "01KKXYNQ..."
+  action: go
+  number: 3
+
+# Save current position as preset 5
+service: hi3510.ptz_preset
+data:
+  entry_id: "01KKXYNQ..."
+  action: save
+  number: 5
+```
+
+### Diagnostics
+
+Download diagnostic data from any camera device page (⋮ → Download diagnostics). The JSON includes coordinator data, camera info, and options — with passwords and usernames redacted.
 
 ### Button
 
 | Entity | Description |
 |---|---|
 | Reboot | Sends reboot command (30–60s downtime) |
+| PTZ Left | Move camera left |
+| PTZ Right | Move camera right |
+| PTZ Up | Move camera up |
+| PTZ Down | Move camera down |
+| PTZ Home | Return to home position |
+| PTZ Zoom In | Zoom in |
+| PTZ Zoom Out | Zoom out |
 
 ### Binary Sensor
 
@@ -184,6 +232,7 @@ All image parameters are sent together to prevent firmware from resetting unspec
 | SD Free Space | Diagnostic | Available SD space in MB |
 | SD Total Space | Diagnostic | Total SD capacity in MB |
 | SD Status | Diagnostic | OK / Not Inserted / Error |
+| Cached Recordings | Diagnostic | Number of cached MP4 files for this camera |
 
 ## Setup
 
@@ -201,6 +250,8 @@ Configure integration options without removing the camera:
 - **Connection**: update host, port, credentials, RTSP port
 - **Cache retention**: set how many days to keep cached recordings (default: 7)
 - **Allowed networks**: restrict cache browser access to specific IP ranges (default: private networks)
+- **Polling interval**: how often to poll camera parameters, 10–300 seconds (default: 30)
+- **Motion detection interval**: how often to check for motion events, 1–60 seconds (default: 3)
 
 ### SD Card Recording Playback
 
@@ -433,8 +484,9 @@ The integration registers as a Home Assistant media source, making SD card recor
 
 ### Polling
 
-- Main coordinator: every 30s (image, OSD, infrared, ONVIF, recording, audio, SD info)
-- Motion coordinator: every 3s (SD card alarm file browsing)
+- Main coordinator: configurable, default 30s (image, OSD, infrared, ONVIF, recording, audio, SD info)
+- Motion coordinator: configurable, default 3s (SD card alarm file browsing)
+- Both intervals adjustable in the options flow per camera
 
 ### Safety
 
@@ -463,7 +515,7 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 - OSD position: 2 options on older firmware, 4 on newer
 - HTTP Basic Auth with no encryption
 - Motion detection requires an SD card
-- PTZ presets must be configured via the camera's web UI
+- PTZ presets must be saved via the camera's web UI or the `hi3510.ptz_preset` service
 
 ## Languages
 
@@ -471,6 +523,19 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 - Italian
 
 ## Changelog
+
+### 1.6.0
+
+- **PTZ control entities**: 7 button entities per camera (Left, Right, Up, Down, Home, Zoom In, Zoom Out) — visible on the device page and usable in dashboards and automations
+- **PTZ preset select**: select entity (1–16) to go to a saved preset position directly from the device page
+- **PTZ services**: `hi3510.ptz_move` and `hi3510.ptz_preset` services for automations and scripts, with full direction/zoom/focus/iris control and preset go/save
+- **HA diagnostics**: download diagnostic data from any camera device page (⋮ → Download diagnostics) — includes coordinator data, camera info, and options with sensitive data redacted
+- **Configurable polling**: polling interval (10–300s) and motion detection interval (1–60s) now adjustable per camera in the options flow
+- **OSD text validation**: max 32 characters enforced on the OSD text entity
+- **Camera as CoordinatorEntity**: camera entity now properly extends `CoordinatorEntity` for correct availability tracking (unavailable after 3 consecutive failures)
+- **Motion midnight fix**: motion detection preserves active state across midnight instead of falsely resetting
+- **ffmpeg debug logging**: full ffmpeg stderr output logged at debug level when SD recording conversion fails (was truncated)
+- **Code refactor**: shared view utilities extracted to `view_utils.py` (DRY cleanup of `views.py` and `sd_browser.py`)
 
 ### 1.5.0
 
