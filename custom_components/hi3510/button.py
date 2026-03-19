@@ -39,10 +39,13 @@ async def async_setup_entry(
 ) -> None:
     data = hass.data[DOMAIN][entry.entry_id]
     api = data["api"]
+    coordinator = data["coordinator"]
     entities: list[ButtonEntity] = [Hi3510RebootButton(api, entry)]
-    entities.extend(
-        Hi3510PtzButton(api, entry, desc) for desc in PTZ_BUTTON_DESCRIPTIONS
-    )
+    # PTZ buttons solo per cam motorizzate
+    if coordinator.data and coordinator.data.get("ptz_supported"):
+        entities.extend(
+            Hi3510PtzButton(api, entry, desc) for desc in PTZ_BUTTON_DESCRIPTIONS
+        )
     async_add_entities(entities)
 
 

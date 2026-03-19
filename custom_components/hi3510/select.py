@@ -40,8 +40,11 @@ async def async_setup_entry(
 
     entities: list[SelectEntity] = [
         Hi3510InfraredSelect(coordinator, api, entry),
-        Hi3510PtzPresetSelect(api, entry),
     ]
+
+    # PTZ preset solo per cam motorizzate
+    if coordinator.data and coordinator.data.get("ptz_supported"):
+        entities.append(Hi3510PtzPresetSelect(api, entry))
 
     # OSD place selects: solo per regioni supportate
     osd_data = coordinator.data.get("osd", {}) if coordinator.data else {}

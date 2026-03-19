@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from datetime import datetime, timedelta
 from typing import Any
@@ -74,7 +75,27 @@ class Hi3510DataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             self._consecutive_errors = 0
 
+        # Deriva supporto PTZ dal model code (Z0 = fissa, Z1+ = PTZ)
+        data["ptz_supported"] = self._check_ptz_support(data)
+
         return data
+
+    @staticmethod
+    def _check_ptz_support(data: dict[str, Any]) -> bool:
+        """Controlla se la camera supporta PTZ dal model code.
+
+        Il model code Hi3510 ha formato CxFxSxZnNxPxLx dove Zn indica:
+        Z0 = no zoom/PTZ (camera fissa)
+        Z1+ = zoom/PTZ (camera motorizzata)
+        """
+        info = data.get("server_info")
+        if not info:
+            return False
+        model = info.get("model", "")
+        match = re.search(r"Z(\d+)", model)
+        if match:
+            return int(match.group(1)) > 0
+        return False
 
     async def _safe_call(self, func: Any, *args: Any) -> Any:
         """Chiama func, ritorna None se fallisce."""

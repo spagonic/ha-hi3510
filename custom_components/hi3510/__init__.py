@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import entity_registry as er
 
 from .api import Hi3510ApiClient, Hi3510AuthError, Hi3510ConnectionError
 from .const import CONF_RTSP_PORT, DOMAIN, PLATFORMS, PTZ_ACTIONS, PTZ_MAX_PRESETS, PTZ_MAX_SPEED
@@ -63,6 +64,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: Hi3510ConfigEntry) -> bo
 
     # Forward platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Pulizia entità PTZ orfane (cam fisse che avevano PTZ in v1.6.0)
+    if not main_coordinator.data.get("ptz_supported"):
+        ent_reg = er.async_get(hass)
+        ptz_keys = {"ptz_left", "ptz_right", "ptz_up", "ptz_down", "ptz_home",
+                     "ptz_zoom_in", "ptz_zoom_out", "ptz_preset"}
+        for key in ptz_keys:
+            uid = f"{entry.unique_id}_{key}"
+            entity_id = ent_reg.async_get_entity_id("button" if key != "ptz_preset" else "select", DOMAIN, uid)
+            if entity_id:
+                ent_reg.async_remove(entity_id)
+                _LOGGER.debug("Rimossa entità PTZ orfana: %s", entity_id)
 
     # Registra HTTP view per playback SD (una sola volta)
     if not hass.data[DOMAIN].get("_view_registered"):
