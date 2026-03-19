@@ -15,7 +15,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
 from .api import Hi3510ApiClient, Hi3510AuthError, Hi3510ConnectionError
-from .const import CONF_RTSP_PORT, DOMAIN, PLATFORMS, PTZ_ACTIONS, PTZ_MAX_PRESETS, PTZ_MAX_SPEED
+from .const import CONF_PTZ_ENABLED, CONF_RTSP_PORT, DOMAIN, PLATFORMS, PTZ_ACTIONS, PTZ_MAX_PRESETS, PTZ_MAX_SPEED
 from .coordinator import Hi3510DataCoordinator, Hi3510MotionCoordinator
 from .sd_browser import Hi3510SdBrowserView, Hi3510SdCacheStatsView, Hi3510SdClearView, Hi3510SdDownloadView, Hi3510SdHubView, Hi3510SdIndexView, Hi3510SdMergeView, Hi3510SdMonthView
 from .view_utils import cleanup_cache
@@ -65,8 +65,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: Hi3510ConfigEntry) -> bo
     # Forward platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Pulizia entità PTZ orfane (cam fisse che avevano PTZ in v1.6.0)
-    if not main_coordinator.data.get("ptz_supported"):
+    # Pulizia entità PTZ orfane (cam senza PTZ abilitato)
+    ptz_enabled = entry.options.get(CONF_PTZ_ENABLED, False) or entry.data.get(CONF_PTZ_ENABLED, False)
+    if not ptz_enabled:
         ent_reg = er.async_get(hass)
         ptz_keys = {"ptz_left", "ptz_right", "ptz_up", "ptz_down", "ptz_home",
                      "ptz_zoom_in", "ptz_zoom_out", "ptz_preset"}

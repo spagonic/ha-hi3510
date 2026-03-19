@@ -25,7 +25,8 @@
         "data": {
           "username": "Username",
           "password": "Password",
-          "rtsp_port": "RTSP Port"
+          "rtsp_port": "RTSP Port",
+          "ptz_enabled": "PTZ enabled (motorized camera)"
         }
       },
       "manual": {
@@ -36,7 +37,8 @@
           "port": "HTTP Port",
           "username": "Username",
           "password": "Password",
-          "rtsp_port": "RTSP Port"
+          "rtsp_port": "RTSP Port",
+          "ptz_enabled": "PTZ enabled (motorized camera)"
         },
         "data_description": {
           "host": "IP address or hostname of the camera",
@@ -68,7 +70,8 @@
           "cache_retention_days": "Cache retention (days)",
           "allowed_networks": "Allowed networks (CIDR, comma separated)",
           "scan_interval": "Polling interval (seconds)",
-          "motion_interval": "Motion detection interval (seconds)"
+          "motion_interval": "Motion detection interval (seconds)",
+          "ptz_enabled": "PTZ enabled (motorized camera)"
         },
         "data_description": {
           "cache_retention_days": "Cached video files older than this will be automatically deleted (1-365)",

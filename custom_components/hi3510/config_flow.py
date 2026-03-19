@@ -20,6 +20,7 @@ from .const import (
     CONF_ALLOWED_NETWORKS,
     CONF_CACHE_RETENTION_DAYS,
     CONF_MOTION_INTERVAL,
+    CONF_PTZ_ENABLED,
     CONF_RTSP_PORT,
     CONF_SCAN_INTERVAL,
     DEFAULT_ALLOWED_NETWORKS,
@@ -43,6 +44,7 @@ MANUAL_SCHEMA = vol.Schema(
         vol.Required(CONF_USERNAME, default=DEFAULT_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
         vol.Required(CONF_RTSP_PORT, default=DEFAULT_RTSP_PORT): int,
+        vol.Optional(CONF_PTZ_ENABLED, default=False): bool,
     }
 )
 
@@ -312,6 +314,7 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_USERNAME, default=DEFAULT_USERNAME): str,
                 vol.Required(CONF_PASSWORD): str,
                 vol.Required(CONF_RTSP_PORT, default=DEFAULT_RTSP_PORT): int,
+                vol.Optional(CONF_PTZ_ENABLED, default=False): bool,
             }
         )
 
@@ -415,6 +418,7 @@ class Hi3510OptionsFlow(OptionsFlow):
                 options[CONF_ALLOWED_NETWORKS] = networks_str
                 options[CONF_SCAN_INTERVAL] = user_input[CONF_SCAN_INTERVAL]
                 options[CONF_MOTION_INTERVAL] = user_input[CONF_MOTION_INTERVAL]
+                options[CONF_PTZ_ENABLED] = user_input.get(CONF_PTZ_ENABLED, False)
                 self.hass.config_entries.async_update_entry(
                     self._config_entry, options=options
                 )
@@ -449,6 +453,10 @@ class Hi3510OptionsFlow(OptionsFlow):
                     CONF_MOTION_INTERVAL,
                     default=opts.get(CONF_MOTION_INTERVAL, DEFAULT_MOTION_INTERVAL),
                 ): vol.All(int, vol.Range(min=1, max=60)),
+                vol.Optional(
+                    CONF_PTZ_ENABLED,
+                    default=opts.get(CONF_PTZ_ENABLED, False),
+                ): bool,
             }
         )
 

@@ -25,7 +25,8 @@
         "data": {
           "username": "Nome utente",
           "password": "Password",
-          "rtsp_port": "Porta RTSP"
+          "rtsp_port": "Porta RTSP",
+          "ptz_enabled": "PTZ abilitato (camera motorizzata)"
         }
       },
       "manual": {
@@ -36,7 +37,8 @@
           "port": "Porta HTTP",
           "username": "Nome utente",
           "password": "Password",
-          "rtsp_port": "Porta RTSP"
+          "rtsp_port": "Porta RTSP",
+          "ptz_enabled": "PTZ abilitato (camera motorizzata)"
         },
         "data_description": {
           "host": "Indirizzo IP o hostname della camera",
@@ -68,7 +70,8 @@
           "cache_retention_days": "Durata cache (giorni)",
           "allowed_networks": "Reti autorizzate (CIDR, separate da virgola)",
           "scan_interval": "Intervallo polling (secondi)",
-          "motion_interval": "Intervallo rilevamento movimento (secondi)"
+          "motion_interval": "Intervallo rilevamento movimento (secondi)",
+          "ptz_enabled": "PTZ abilitato (camera motorizzata)"
         },
         "data_description": {
           "cache_retention_days": "I video in cache più vecchi di questo valore verranno eliminati automaticamente (1-365)",
