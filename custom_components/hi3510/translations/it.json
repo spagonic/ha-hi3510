@@ -66,11 +66,15 @@
           "password": "Password",
           "rtsp_port": "Porta RTSP",
           "cache_retention_days": "Durata cache (giorni)",
-          "allowed_networks": "Reti autorizzate (CIDR, separate da virgola)"
+          "allowed_networks": "Reti autorizzate (CIDR, separate da virgola)",
+          "scan_interval": "Intervallo polling (secondi)",
+          "motion_interval": "Intervallo rilevamento movimento (secondi)"
         },
         "data_description": {
           "cache_retention_days": "I video in cache più vecchi di questo valore verranno eliminati automaticamente (1-365)",
-          "allowed_networks": "Solo le richieste da queste reti possono accedere al browser cache senza autenticazione"
+          "allowed_networks": "Solo le richieste da queste reti possono accedere al browser cache senza autenticazione",
+          "scan_interval": "Frequenza di polling dei parametri camera (10-300, default 30)",
+          "motion_interval": "Frequenza di controllo eventi movimento (1-60, default 3)"
         }
       }
     },
@@ -90,7 +94,8 @@
     "select": {
       "infrared": { "name": "Modalità Infrarossi" },
       "osd_place_0": { "name": "Posizione OSD Data/Ora" },
-      "osd_place_1": { "name": "Posizione OSD Nome" }
+      "osd_place_1": { "name": "Posizione OSD Nome" },
+      "ptz_preset": { "name": "Preset PTZ" }
     },
     "number": {
       "brightness": { "name": "Luminosità" },
@@ -101,7 +106,14 @@
       "audio_out_volume": { "name": "Volume Audio Uscita" }
     },
     "button": {
-      "reboot": { "name": "Riavvia" }
+      "reboot": { "name": "Riavvia" },
+      "ptz_left": { "name": "PTZ Sinistra" },
+      "ptz_right": { "name": "PTZ Destra" },
+      "ptz_up": { "name": "PTZ Su" },
+      "ptz_down": { "name": "PTZ Giù" },
+      "ptz_home": { "name": "PTZ Home" },
+      "ptz_zoom_in": { "name": "PTZ Zoom +" },
+      "ptz_zoom_out": { "name": "PTZ Zoom -" }
     },
     "binary_sensor": {
       "motion": { "name": "Movimento" }

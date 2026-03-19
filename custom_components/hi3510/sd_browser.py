@@ -18,22 +18,13 @@ from homeassistant.core import HomeAssistant
 
 from .const import CACHE_DIR, DOMAIN
 from .hxvs_parser import hxvs_to_mpegts
+from .view_utils import is_local_request as _is_local, get_cam_name as _get_cam_name
 
 _LOGGER = logging.getLogger(__name__)
 
 SD_INDEX_DIR = "hi3510_sd_index"
 INDEX_TTL_TODAY = 3600
 INDEX_TTL_PAST = 86400
-
-
-def _is_local(request: web.Request, hass: HomeAssistant) -> bool:
-    from .views import _is_local_request
-    return _is_local_request(request, hass)
-
-
-def _get_cam_name(hass: HomeAssistant, entry_id: str) -> str:
-    from .views import _get_cam_name as _gcn
-    return _gcn(hass, entry_id)
 
 
 def _index_path(hass: HomeAssistant, entry_id: str, day: str) -> Path:
@@ -909,7 +900,9 @@ class Hi3510SdMergeView(HomeAssistantView):
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
             _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
             if proc.returncode != 0:
-                raise RuntimeError(f"ffmpeg exit {proc.returncode}: {stderr.decode(errors='replace')[-300:]}")
+                stderr_text = stderr.decode(errors='replace')
+                _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)
+                raise RuntimeError(f"ffmpeg exit {proc.returncode}: {stderr_text[-300:]}")
             return await self.hass.async_add_executor_job(Path(output_path).read_bytes)
         finally:
             for p in (input_path, output_path, audio_path):
@@ -1023,7 +1016,9 @@ class Hi3510SdDownloadView(HomeAssistantView):
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
             _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
             if proc.returncode != 0:
-                raise RuntimeError(f"ffmpeg exit {proc.returncode}: {stderr.decode(errors='replace')[-300:]}")
+                stderr_text = stderr.decode(errors='replace')
+                _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)
+                raise RuntimeError(f"ffmpeg exit {proc.returncode}: {stderr_text[-300:]}")
             return await self.hass.async_add_executor_job(Path(output_path).read_bytes)
         finally:
             for p in (input_path, output_path, audio_path):

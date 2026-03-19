@@ -27,105 +27,19 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.components import persistent_notification as pn
 from homeassistant.core import HomeAssistant, callback
 
-from .const import CACHE_DIR, CACHE_MAX_AGE_DAYS, CONF_ALLOWED_NETWORKS, CONF_CACHE_RETENTION_DAYS, DEFAULT_ALLOWED_NETWORKS, DOMAIN
+from .const import CACHE_DIR, DOMAIN
 from .hxvs_parser import hxvs_to_mpegts
+from .view_utils import (
+    cleanup_cache,
+    get_cam_name,
+    is_local_request,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-import ipaddress
-
-_DEFAULT_NETWORKS = tuple(
-    ipaddress.ip_network(n) for n in (
-        "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
-        "127.0.0.0/8", "::1/128", "fe80::/10",
-    )
-)
-
-
-def _get_allowed_networks(hass: HomeAssistant) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
-    """Legge le reti ammesse dalle options di qualsiasi entry hi3510."""
-    for entry_id, data in hass.data.get(DOMAIN, {}).items():
-        if not isinstance(data, dict):
-            continue
-        entry = hass.config_entries.async_get_entry(entry_id)
-        if entry and entry.options.get(CONF_ALLOWED_NETWORKS):
-            nets = []
-            for n in entry.options[CONF_ALLOWED_NETWORKS].split(","):
-                n = n.strip()
-                if n:
-                    try:
-                        nets.append(ipaddress.ip_network(n, strict=False))
-                    except ValueError:
-                        pass
-            nets.extend([
-                ipaddress.ip_network("127.0.0.0/8"),
-                ipaddress.ip_network("::1/128"),
-            ])
-            return tuple(nets)
-    return _DEFAULT_NETWORKS
-
-
-def _is_local_request(request: web.Request, hass: HomeAssistant) -> bool:
-    """Verifica che la richiesta arrivi da una rete ammessa."""
-    peername = request.transport.get_extra_info("peername")
-    if not peername:
-        return False
-    try:
-        addr = ipaddress.ip_address(peername[0])
-    except ValueError:
-        return False
-    return any(addr in net for net in _get_allowed_networks(hass))
-
-
-def cleanup_cache(hass: HomeAssistant) -> int:
-    """Elimina file cache più vecchi della retention configurata."""
-    import time
-
-    retention_days = CACHE_MAX_AGE_DAYS
-    for entry_id, data in hass.data.get(DOMAIN, {}).items():
-        if not isinstance(data, dict):
-            continue
-        entry = hass.config_entries.async_get_entry(entry_id)
-        if entry and CONF_CACHE_RETENTION_DAYS in entry.options:
-            retention_days = entry.options[CONF_CACHE_RETENTION_DAYS]
-            break
-
-    cache_dir = Path(hass.config.path(CACHE_DIR))
-    if not cache_dir.exists():
-        return 0
-
-    max_age_secs = retention_days * 86400
-    now = time.time()
-    removed = 0
-
-    for f in cache_dir.iterdir():
-        if f.is_file() and f.suffix == ".mp4":
-            age = now - f.stat().st_mtime
-            if age > max_age_secs:
-                try:
-                    f.unlink()
-                    removed += 1
-                except OSError:
-                    pass
-
-    if removed:
-        _LOGGER.info("Cache cleanup: rimossi %d file (>%d giorni)", removed, retention_days)
-    return removed
-
-
-def _get_cam_name(hass: HomeAssistant, entry_id: str) -> str:
-    """Ottieni nome camera dal device registry."""
-    from homeassistant.helpers import device_registry as dr
-    data = hass.data.get(DOMAIN, {}).get(entry_id)
-    if not data or not isinstance(data, dict):
-        return f"Camera {entry_id[:8]}"
-    api = data["api"]
-    cam_name = f"Hi3510 {api.host}"
-    device_reg = dr.async_get(hass)
-    for device in dr.async_entries_for_config_entry(device_reg, entry_id):
-        cam_name = device.name_by_user or device.name or cam_name
-        break
-    return cam_name
+# Alias per retrocompatibilità (sd_browser.py importa questi nomi)
+_is_local_request = is_local_request
+_get_cam_name = get_cam_name
 
 
 def _parse_file_date(orig_name: str) -> str | None:
@@ -354,7 +268,9 @@ class Hi3510PlaybackView(HomeAssistantView):
             )
             _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
             if proc.returncode != 0:
-                raise RuntimeError(f"ffmpeg exit {proc.returncode}: {stderr.decode(errors='replace')[-300:]}")
+                stderr_text = stderr.decode(errors='replace')
+                _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)
+                raise RuntimeError(f"ffmpeg exit {proc.returncode}: {stderr_text[-300:]}")
             mp4_data = await self.hass.async_add_executor_job(Path(output_path).read_bytes)
             return mp4_data
         finally:

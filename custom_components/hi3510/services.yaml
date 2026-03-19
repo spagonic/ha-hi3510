@@ -1,0 +1,71 @@
+ptz_move:
+  name: PTZ Move
+  description: Move the camera in a direction or perform zoom/focus/iris control.
+  fields:
+    entry_id:
+      name: Config Entry ID
+      description: The config entry ID of the camera.
+      required: true
+      selector:
+        text:
+    action:
+      name: Action
+      description: PTZ action to perform.
+      required: true
+      selector:
+        select:
+          options:
+            - left
+            - right
+            - up
+            - down
+            - home
+            - stop
+            - leftup
+            - leftdown
+            - rightup
+            - rightdown
+            - hscan
+            - vscan
+            - zoomin
+            - zoomout
+            - focusin
+            - focusout
+            - irisin
+            - irisout
+    speed:
+      name: Speed
+      description: Movement speed (0-4, default 1).
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 4
+
+ptz_preset:
+  name: PTZ Preset
+  description: Go to or save a PTZ preset position.
+  fields:
+    entry_id:
+      name: Config Entry ID
+      description: The config entry ID of the camera.
+      required: true
+      selector:
+        text:
+    action:
+      name: Action
+      description: Whether to go to or save the preset.
+      required: true
+      selector:
+        select:
+          options:
+            - go
+            - save
+    number:
+      name: Preset Number
+      description: Preset number (1-16).
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 16

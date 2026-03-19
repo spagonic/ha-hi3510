@@ -4,17 +4,21 @@ from __future__ import annotations
 
 import logging
 
+import voluptuous as vol
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import homeassistant.helpers.config_validation as cv
 
 from .api import Hi3510ApiClient, Hi3510AuthError, Hi3510ConnectionError
-from .const import CONF_RTSP_PORT, DOMAIN, PLATFORMS
+from .const import CONF_RTSP_PORT, DOMAIN, PLATFORMS, PTZ_ACTIONS, PTZ_MAX_PRESETS, PTZ_MAX_SPEED
 from .coordinator import Hi3510DataCoordinator, Hi3510MotionCoordinator
 from .sd_browser import Hi3510SdBrowserView, Hi3510SdCacheStatsView, Hi3510SdClearView, Hi3510SdDownloadView, Hi3510SdHubView, Hi3510SdIndexView, Hi3510SdMergeView, Hi3510SdMonthView
-from .views import Hi3510CacheBrowserView, Hi3510CacheFileView, Hi3510CacheHubView, Hi3510PlaybackView, cleanup_cache
+from .view_utils import cleanup_cache
+from .views import Hi3510CacheBrowserView, Hi3510CacheFileView, Hi3510CacheHubView, Hi3510PlaybackView
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,7 +82,66 @@ async def async_setup_entry(hass: HomeAssistant, entry: Hi3510ConfigEntry) -> bo
         # Pulizia cache vecchia all'avvio
         await hass.async_add_executor_job(cleanup_cache, hass)
 
+    # Registra servizi PTZ (una sola volta)
+    if not hass.data[DOMAIN].get("_services_registered"):
+        _register_services(hass)
+        hass.data[DOMAIN]["_services_registered"] = True
+
     return True
+
+
+def _register_services(hass: HomeAssistant) -> None:
+    """Registra i servizi hi3510.ptz_move e hi3510.ptz_preset."""
+
+    SERVICE_PTZ_MOVE = "ptz_move"
+    SERVICE_PTZ_PRESET = "ptz_preset"
+
+    PTZ_MOVE_SCHEMA = vol.Schema(
+        {
+            vol.Required("entry_id"): cv.string,
+            vol.Required("action"): vol.In(PTZ_ACTIONS),
+            vol.Optional("speed", default=1): vol.All(
+                int, vol.Range(min=0, max=PTZ_MAX_SPEED)
+            ),
+        }
+    )
+
+    PTZ_PRESET_SCHEMA = vol.Schema(
+        {
+            vol.Required("entry_id"): cv.string,
+            vol.Required("action"): vol.In(["go", "save"]),
+            vol.Required("number"): vol.All(
+                int, vol.Range(min=1, max=PTZ_MAX_PRESETS)
+            ),
+        }
+    )
+
+    async def handle_ptz_move(call: ServiceCall) -> None:
+        """Gestisce il servizio ptz_move."""
+        entry_id = call.data["entry_id"]
+        data = hass.data.get(DOMAIN, {}).get(entry_id)
+        if not data or not isinstance(data, dict):
+            _LOGGER.error("Entry %s non trovata", entry_id)
+            return
+        api: Hi3510ApiClient = data["api"]
+        await api.ptz_command(call.data["action"], call.data["speed"])
+
+    async def handle_ptz_preset(call: ServiceCall) -> None:
+        """Gestisce il servizio ptz_preset."""
+        entry_id = call.data["entry_id"]
+        data = hass.data.get(DOMAIN, {}).get(entry_id)
+        if not data or not isinstance(data, dict):
+            _LOGGER.error("Entry %s non trovata", entry_id)
+            return
+        api: Hi3510ApiClient = data["api"]
+        number = call.data["number"]
+        if call.data["action"] == "go":
+            await api.ptz_preset_go(number)
+        else:
+            await api.ptz_preset_save(number)
+
+    hass.services.async_register(DOMAIN, SERVICE_PTZ_MOVE, handle_ptz_move, PTZ_MOVE_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_PTZ_PRESET, handle_ptz_preset, PTZ_PRESET_SCHEMA)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: Hi3510ConfigEntry) -> bool:

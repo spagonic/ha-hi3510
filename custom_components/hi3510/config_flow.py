@@ -19,10 +19,14 @@ from .const import (
     CACHE_MAX_AGE_DAYS,
     CONF_ALLOWED_NETWORKS,
     CONF_CACHE_RETENTION_DAYS,
+    CONF_MOTION_INTERVAL,
     CONF_RTSP_PORT,
+    CONF_SCAN_INTERVAL,
     DEFAULT_ALLOWED_NETWORKS,
+    DEFAULT_MOTION_INTERVAL,
     DEFAULT_PORT,
     DEFAULT_RTSP_PORT,
+    DEFAULT_SCAN_INTERVAL,
     DEFAULT_USERNAME,
     DOMAIN,
 )
@@ -405,10 +409,12 @@ class Hi3510OptionsFlow(OptionsFlow):
                 self.hass.config_entries.async_update_entry(
                     self._config_entry, data=conn_data
                 )
-                # Salva cache/security in options
+                # Salva cache/security/polling in options
                 options = dict(self._config_entry.options)
                 options[CONF_CACHE_RETENTION_DAYS] = user_input[CONF_CACHE_RETENTION_DAYS]
                 options[CONF_ALLOWED_NETWORKS] = networks_str
+                options[CONF_SCAN_INTERVAL] = user_input[CONF_SCAN_INTERVAL]
+                options[CONF_MOTION_INTERVAL] = user_input[CONF_MOTION_INTERVAL]
                 self.hass.config_entries.async_update_entry(
                     self._config_entry, options=options
                 )
@@ -435,6 +441,14 @@ class Hi3510OptionsFlow(OptionsFlow):
                     CONF_ALLOWED_NETWORKS,
                     default=opts.get(CONF_ALLOWED_NETWORKS, DEFAULT_ALLOWED_NETWORKS),
                 ): str,
+                vol.Required(
+                    CONF_SCAN_INTERVAL,
+                    default=opts.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                ): vol.All(int, vol.Range(min=10, max=300)),
+                vol.Required(
+                    CONF_MOTION_INTERVAL,
+                    default=opts.get(CONF_MOTION_INTERVAL, DEFAULT_MOTION_INTERVAL),
+                ): vol.All(int, vol.Range(min=1, max=60)),
             }
         )
 

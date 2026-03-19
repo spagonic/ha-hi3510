@@ -35,6 +35,7 @@ class Hi3510OsdText(CoordinatorEntity[Hi3510DataCoordinator], TextEntity):
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
+    _attr_native_max = 32
 
     def __init__(
         self,

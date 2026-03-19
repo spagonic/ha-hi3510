@@ -82,4 +82,6 @@ CACHE_MAX_AGE_DAYS = 7  # Default: file cache più vecchi di N giorni vengono el
 # Options keys
 CONF_CACHE_RETENTION_DAYS = "cache_retention_days"
 CONF_ALLOWED_NETWORKS = "allowed_networks"
+CONF_SCAN_INTERVAL = "scan_interval"
+CONF_MOTION_INTERVAL = "motion_interval"
 DEFAULT_ALLOWED_NETWORKS = "10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8"

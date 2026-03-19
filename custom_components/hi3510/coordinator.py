@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import Hi3510ApiClient, Hi3510ConnectionError, Hi3510Error
-from .const import DEFAULT_MOTION_INTERVAL, DEFAULT_MOTION_OFF_DELAY, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import DEFAULT_MOTION_INTERVAL, DEFAULT_MOTION_OFF_DELAY, DEFAULT_SCAN_INTERVAL, DOMAIN, CONF_SCAN_INTERVAL, CONF_MOTION_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,11 +25,12 @@ class Hi3510DataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(
         self, hass: HomeAssistant, api: Hi3510ApiClient, entry: ConfigEntry
     ) -> None:
+        scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(seconds=scan_interval),
             config_entry=entry,
         )
         self.api = api
@@ -97,11 +98,12 @@ class Hi3510MotionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(
         self, hass: HomeAssistant, api: Hi3510ApiClient, entry: ConfigEntry
     ) -> None:
+        motion_interval = entry.options.get(CONF_MOTION_INTERVAL, DEFAULT_MOTION_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_motion",
-            update_interval=timedelta(seconds=DEFAULT_MOTION_INTERVAL),
+            update_interval=timedelta(seconds=motion_interval),
             config_entry=entry,
         )
         self.api = api
@@ -114,7 +116,7 @@ class Hi3510MotionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Controlla nuovi file alarm sulla SD."""
         today = datetime.now().strftime("%Y%m%d")
 
-        # Cambio giorno: resetta
+        # Cambio giorno: resetta cartella ma preserva stato motion attivo
         if today != self._current_day:
             self._current_day = today
             self._current_record_folder = ""

@@ -24,6 +24,7 @@ from .const import (
     OSD_X_LEFT,
     OSD_PLACE_TOP,
     OSD_PLACE_BOTTOM,
+    PTZ_MAX_PRESETS,
 )
 from .coordinator import Hi3510DataCoordinator
 
@@ -39,6 +40,7 @@ async def async_setup_entry(
 
     entities: list[SelectEntity] = [
         Hi3510InfraredSelect(coordinator, api, entry),
+        Hi3510PtzPresetSelect(api, entry),
     ]
 
     # OSD place selects: solo per regioni supportate
@@ -212,3 +214,33 @@ class Hi3510OsdPlaceSelect(CoordinatorEntity[Hi3510DataCoordinator], SelectEntit
                 f"This position may not be supported by your camera firmware."
             )
         await self.coordinator.async_request_refresh()
+
+
+
+class Hi3510PtzPresetSelect(SelectEntity):
+    """Select per andare a un preset PTZ."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "ptz_preset"
+    _attr_icon = "mdi:crosshairs-gps"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_options = [str(i) for i in range(1, PTZ_MAX_PRESETS + 1)]
+
+    def __init__(self, api: Hi3510ApiClient, entry: ConfigEntry) -> None:
+        self._api = api
+        self._entry = entry
+        self._attr_unique_id = f"{entry.unique_id}_ptz_preset"
+        self._current: str | None = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(identifiers={(DOMAIN, self._entry.unique_id)})
+
+    @property
+    def current_option(self) -> str | None:
+        return self._current
+
+    async def async_select_option(self, option: str) -> None:
+        await self._api.ptz_preset_go(int(option))
+        self._current = option
+        self.async_write_ha_state()

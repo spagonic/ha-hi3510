@@ -1,4 +1,4 @@
-"""Camera entity per Hi3510 IP Camera (RTSP + snapshot + PTZ)."""
+"""Camera entity per Hi3510 IP Camera (RTSP + snapshot)."""
 
 from __future__ import annotations
 
@@ -10,9 +10,10 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import Hi3510ApiClient, Hi3510Error
-from .const import CONF_RTSP_PORT, DEFAULT_RTSP_PORT, DOMAIN, PTZ_ACTIONS, PTZ_MAX_PRESETS, PTZ_MAX_SPEED
+from .const import CONF_RTSP_PORT, DEFAULT_RTSP_PORT, DOMAIN
 from .coordinator import Hi3510DataCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ async def async_setup_entry(
     ])
 
 
-class Hi3510Camera(Camera):
+class Hi3510Camera(CoordinatorEntity[Hi3510DataCoordinator], Camera):
     """Camera entity con RTSP streaming e snapshot."""
 
     _attr_has_entity_name = True
@@ -40,8 +41,8 @@ class Hi3510Camera(Camera):
         api: Hi3510ApiClient,
         entry: ConfigEntry,
     ) -> None:
-        super().__init__()
-        self._coordinator = coordinator
+        CoordinatorEntity.__init__(self, coordinator)
+        Camera.__init__(self)
         self._api = api
         self._entry = entry
         self._attr_unique_id = f"{entry.unique_id}_camera"
@@ -53,7 +54,7 @@ class Hi3510Camera(Camera):
 
     @property
     def device_info(self) -> DeviceInfo:
-        info = self._coordinator.data.get("server_info", {}) if self._coordinator.data else {}
+        info = self.coordinator.data.get("server_info", {}) if self.coordinator.data else {}
         return DeviceInfo(
             identifiers={(DOMAIN, self._entry.unique_id)},
             name=info.get("name", f"Hi3510 {self._api.host}"),
@@ -62,10 +63,6 @@ class Hi3510Camera(Camera):
             sw_version=info.get("softVersion"),
             hw_version=info.get("hardVersion"),
         )
-
-    @property
-    def available(self) -> bool:
-        return self._coordinator.last_update_success
 
     async def stream_source(self) -> str | None:
         return self._stream_url
