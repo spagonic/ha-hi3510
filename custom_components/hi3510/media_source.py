@@ -233,9 +233,9 @@ class Hi3510MediaSource(MediaSource):
                 if not info:
                     continue
 
-                # H.265 non supportato per playback — skip
-                if info["ext"] == "265":
-                    continue
+                # H.265 ora supportato (transcode a H.264)
+                # if info["ext"] == "265":
+                #     continue
 
                 icon = "🔴🔴" if info["type_short"] == "A" else "🟢🟢"
                 cache_key = f"{entry_id}_{filename}".replace("/", "_")

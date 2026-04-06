@@ -277,10 +277,22 @@ def hxvs_to_mpegts(data: bytes) -> tuple[bytes, int, str, bytes]:
     """
     is_h265, codec, keep, hxvf_list, hxaf_list = _parse_container(data)
 
-    # H.265 non supportato per playback — ritorna subito il codec
-    # per permettere a views.py di mostrare il messaggio appropriato
+    # H.265: estrai raw annex-b stream per transcode ffmpeg
     if is_h265:
-        return b"", 0, codec, b""
+        frames = _extract_frames(data, is_h265, keep, hxvf_list)
+        # Concatena tutti i NAL in un unico stream annex-b
+        h265_stream = bytearray()
+        for _ts_ms, nal_data, _is_kf in frames:
+            h265_stream.extend(nal_data)
+        # Estrai audio
+        audio_raw = bytearray()
+        if hxaf_list:
+            for apos, apsize, _ats_ms in hxaf_list:
+                payload_start = apos + 16 + _HXAF_HEADER_SIZE
+                payload_end = apos + 16 + apsize
+                if payload_start < payload_end <= len(data):
+                    audio_raw.extend(data[payload_start:payload_end])
+        return bytes(h265_stream), len(frames), codec, bytes(audio_raw)
 
     frames = _extract_frames(data, is_h265, keep, hxvf_list)
 

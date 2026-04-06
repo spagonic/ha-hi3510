@@ -205,18 +205,11 @@ class Hi3510PlaybackView(HomeAssistantView):
                 status=HTTPStatus.UNPROCESSABLE_ENTITY,
             )
 
-        if frame_count == 0 and codec != "h265":
+        if frame_count == 0:
             self._dismiss(notif_id)
             return web.Response(text="Nessun frame video trovato", status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
-        if codec == "h265":
-            self._dismiss(notif_id)
-            return web.Response(
-                text="H.265 non supportato per il playback. Impostare la camera in H.264.",
-                status=HTTPStatus.UNPROCESSABLE_ENTITY,
-            )
-
-        self._notify(notif_id, f"🎬 Remux ffmpeg: {short_name} ({frame_count} frames)...", "Hi3510 Playback")
+        self._notify(notif_id, f"🎬 {'Transcode H.265→H.264' if codec == 'h265' else 'Remux'} ffmpeg: {short_name} ({frame_count} frames)...", "Hi3510 Playback")
         try:
             mp4_data = await self._ffmpeg_remux(ts_data, codec, audio_raw)
         except Exception as err:
@@ -240,8 +233,9 @@ class Hi3510PlaybackView(HomeAssistantView):
         pn.async_dismiss(self.hass, notif_id)
 
     async def _ffmpeg_remux(self, ts_data: bytes, codec: str, audio_raw: bytes = b"") -> bytes:
-        """Remux MPEG-TS H.264 in MP4, con audio G.711 a-law se presente."""
-        with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as tmp_in:
+        """Remux MPEG-TS H.264 in MP4 o transcode H.265→H.264, con audio G.711 a-law se presente."""
+        suffix = ".hevc" if codec == "h265" else ".ts"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_in:
             tmp_in.write(ts_data)
             input_path = tmp_in.name
 
@@ -252,10 +246,16 @@ class Hi3510PlaybackView(HomeAssistantView):
                 audio_path = tmp_aud.name
 
         output_path = input_path.rsplit(".", 1)[0] + ".mp4"
-        cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
-        if audio_path:
-            cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
-        cmd.extend(["-c:v", "copy"])
+        if codec == "h265":
+            cmd = ["ffmpeg", "-y", "-f", "hevc", "-i", input_path]
+            if audio_path:
+                cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-crf", "23"])
+        else:
+            cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
+            if audio_path:
+                cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+            cmd.extend(["-c:v", "copy"])
         if audio_path:
             cmd.extend(["-c:a", "aac", "-b:a", "64k"])
         else:
@@ -266,7 +266,7 @@ class Hi3510PlaybackView(HomeAssistantView):
             proc = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
             if proc.returncode != 0:
                 stderr_text = stderr.decode(errors='replace')
                 _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)

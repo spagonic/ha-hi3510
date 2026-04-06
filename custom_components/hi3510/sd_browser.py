@@ -136,7 +136,7 @@ async def _build_sd_index(hass: HomeAssistant, entry_id: str, day: str, force: b
         except Exception:
             continue
         for fname in entries:
-            if not fname.endswith(".264"):
+            if not (fname.endswith(".264") or fname.endswith(".265")):
                 continue
             files.append({"name": fname, "path": rec_path, "full": f"{rec_path}{fname}"})
     files.sort(key=lambda f: f["name"][1:14] if len(f["name"]) > 14 else f["name"])
@@ -149,7 +149,7 @@ async def _build_sd_index(hass: HomeAssistant, entry_id: str, day: str, force: b
 
 _SD_CSS = (
     "* {margin:0;padding:0;box-sizing:border-box}"
-    " body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#111;color:#e1e1e1;padding:16px}"
+    " body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#111;color:#e1e1e1;padding:16px;min-height:100vh;overflow:auto}"
     " a{color:#4fc3f7;text-decoration:none} a:hover{text-decoration:underline}"
     " h1{font-size:1.3em;margin-bottom:4px}"
     " .header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px}"
@@ -168,7 +168,7 @@ _SD_CSS = (
     " .cal-month{font-size:1.1em;font-weight:600;min-width:180px;text-align:center}"
     " .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px}"
     " .cal-hdr{text-align:center;color:#888;font-size:0.75em;padding:4px}"
-    " .cal-day{text-align:center;padding:6px 2px;border-radius:8px;font-size:0.85em;cursor:default;color:#555;position:relative}"
+    " .cal-day{text-align:center;padding:4px 2px;border-radius:6px;font-size:0.75em;cursor:default;color:#555;position:relative}"
     " .cal-day.has{background:#1b5e20;color:#a5d6a7;cursor:pointer} .cal-day.has:hover{background:#2e7d32}"
     " .cal-day.sel{background:#0d47a1;color:#fff} .cal-day.today{border:1px solid #4fc3f7}"
     " .cal-badge{font-size:0.6em;display:block;margin-top:1px;color:#81c784} .cal-day.sel .cal-badge{color:#90caf9}"
@@ -187,7 +187,7 @@ _SD_CSS2 = (
     " .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1b5e20;color:#fff;padding:12px 24px;border-radius:10px;font-size:0.9em;z-index:999;opacity:0;transition:opacity 0.3s}"
     " .toast.show{opacity:1}"
     " .layout{display:flex;gap:16px}"
-    " .sidebar{width:200px;flex-shrink:0}"
+    " .sidebar{width:220px;flex-shrink:0}"
     " .main-panel{flex:1;min-width:0}"
     " .month-item{padding:10px 12px;border-radius:8px;margin-bottom:4px;cursor:pointer;transition:background 0.2s;background:#1c1c1c;display:flex;justify-content:space-between;align-items:center;gap:6px}"
     " .month-item:hover{background:#252525} .month-item.active{background:#0d47a1;color:#fff}"
@@ -199,6 +199,42 @@ _SD_CSS2 = (
     " .filter-btn{padding:6px 12px;border:none;border-radius:6px;cursor:pointer;font-size:0.8em;background:#333;color:#888;transition:all 0.2s}"
     " .filter-btn.active{background:#1565c0;color:#fff} .filter-btn:hover{background:#444} .filter-btn.active:hover{background:#1976d2}"
     " .file-row.used{opacity:0.6} .used-badge{color:#e65100;font-size:0.75em;margin-left:4px}"
+    " .pb-controls{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#1c1c1c;border-radius:8px;margin-top:4px;flex-wrap:wrap}"
+    " .pb-controls button{background:none;border:none;color:#e1e1e1;cursor:pointer;font-size:0.85em;padding:4px 6px;border-radius:4px}"
+    " .pb-controls button:hover{background:#333} .pb-controls button.spd-active{background:#1565c0;color:#fff}"
+    " .pb-progress{height:6px;background:#333;border-radius:3px;cursor:pointer;margin-top:4px;position:relative}"
+    " .pb-progress-bar{height:100%;background:#4fc3f7;border-radius:3px;transition:width 0.1s}"
+    " .pb-time{color:#888;font-size:0.78em;margin:0 4px} .pb-sep{width:1px;height:16px;background:#444;margin:0 4px}"
+    " .pb-file-info{color:#4fc3f7;font-size:0.78em;margin-top:4px}"
+    " .mc-grid{display:grid;gap:12px;margin-top:12px} .mc-cell{position:relative;background:#1c1c1c;border-radius:10px;overflow:hidden}"
+    " .mc-cell video{width:100%;display:block} .mc-label{position:absolute;top:6px;left:8px;background:rgba(0,0,0,0.7);color:#fff;padding:2px 8px;border-radius:4px;font-size:0.75em}"
+    " .mc-status{position:absolute;bottom:6px;left:8px;background:rgba(0,0,0,0.7);color:#4fc3f7;padding:2px 8px;border-radius:4px;font-size:0.75em}"
+    " .mc-btns{position:absolute;top:6px;right:8px;display:flex;gap:4px}"
+    " .mc-btns button{background:rgba(0,0,0,0.7);border:none;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:0.8em}"
+    " .mc-btns button:hover{background:rgba(255,255,255,0.2)}"
+    " .mc-cell.audio-on{box-shadow:0 0 0 2px #4fc3f7}"
+    " .tl-wrap{margin-bottom:16px;display:none}"
+    " .tl-controls{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}"
+    " .tl-controls button{background:#333;border:none;color:#e1e1e1;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.8em}"
+    " .tl-controls button:hover{background:#444} .tl-controls .info{color:#888;font-size:0.78em;margin-left:auto}"
+    " .tl-hours{position:relative;height:18px;margin-bottom:2px;user-select:none}"
+    " .tl-hours span{position:absolute;transform:translateX(-50%);font-size:0.65em;color:#666}"
+    " .tl-track-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}"
+    " .tl-track-label{font-size:0.7em;color:#888;width:36px;flex-shrink:0;text-align:right}"
+    " .tl-track{position:relative;flex:1;height:22px;background:#1c1c1c;border-radius:4px;overflow:hidden;cursor:crosshair}"
+    " .tl-seg{position:absolute;top:2px;height:18px;border-radius:3px;cursor:pointer;min-width:2px;opacity:0.85;transition:opacity 0.15s}"
+    " .tl-seg:hover{opacity:1} .tl-seg.rec{background:#2e7d32} .tl-seg.alarm{background:#c62828}"
+    " .tl-seg.cached{box-shadow:0 -2px 0 0 #4fc3f7 inset} .tl-seg.active{opacity:1;box-shadow:0 0 0 2px #fff}"
+    " .tl-needle{position:absolute;top:0;bottom:0;width:1px;background:#4fc3f7;pointer-events:none;z-index:5}"
+    " .tl-needle-label{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:0.65em;color:#4fc3f7;white-space:nowrap;background:#111;padding:0 3px;border-radius:2px}"
+    " .tl-scrollbar-row{display:flex;align-items:center;gap:4px;margin-top:4px}"
+    " .tl-pan-btn{background:none;border:none;color:#888;cursor:pointer;font-size:0.8em;padding:2px 6px}"
+    " .tl-pan-btn:hover{color:#e1e1e1}"
+    " .tl-scrollbar{flex:1;height:8px;background:#1c1c1c;border-radius:4px;position:relative;cursor:pointer}"
+    " .tl-scrollbar-thumb{position:absolute;top:0;height:100%;background:#4fc3f7;border-radius:4px;opacity:0.5;min-width:10px}"
+    " .tl-legend{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:0.75em;color:#888}"
+    " .ld{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:3px}"
+    " .ld.rec{background:#2e7d32} .ld.alarm{background:#c62828} .ld.cache{background:#4fc3f7}"
     " @media(max-width:700px){.layout{flex-direction:column}.sidebar{width:100%;display:flex;flex-wrap:wrap;gap:4px}.month-item{flex:1;min-width:90px;text-align:center;flex-direction:column}}"
 )
 
@@ -303,17 +339,31 @@ class Hi3510SdBrowserView(HomeAssistantView):
             return web.Response(text="Forbidden", status=HTTPStatus.FORBIDDEN)
         if entry_id not in self.hass.data.get(DOMAIN, {}):
             return web.Response(text="Camera non trovata", status=HTTPStatus.NOT_FOUND)
-        entries_param = request.query.get("entries", "")
-        cam_name = _get_cam_name(self.hass, entry_id)
-        import html as html_mod
-        name_esc = html_mod.escape(cam_name)
-        back_qs = f"?entries={entries_param}" if entries_param else ""
-        back_url = f"/api/hi3510/sd{back_qs}"
-        html = _browser_html(name_esc, entry_id, back_url)
-        return web.Response(text=html, content_type="text/html")
+        try:
+            entries_param = request.query.get("entries", "")
+            cam_name = _get_cam_name(self.hass, entry_id)
+            import html as html_mod
+            name_esc = html_mod.escape(cam_name)
+            back_qs = f"?entries={entries_param}" if entries_param else ""
+            back_url = f"/api/hi3510/sd{back_qs}"
+            # Build all entries list for multi-cam
+            all_entries = []
+            try:
+                for eid, data in self.hass.data.get(DOMAIN, {}).items():
+                    if not isinstance(data, dict):
+                        continue
+                    all_entries.append({"id": eid, "name": _get_cam_name(self.hass, eid)})
+                all_entries.sort(key=lambda c: c["name"].lower())
+            except Exception:
+                all_entries = []
+            html = _browser_html(name_esc, entry_id, back_url, all_entries)
+            return web.Response(body=html.encode("utf-8", errors="replace"), content_type="text/html", charset="utf-8")
+        except Exception as err:
+            _LOGGER.exception("SD Browser view error for %s: %s", entry_id, err)
+            return web.Response(text=f"Error: {err}", status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
-def _browser_html(cam_name: str, eid: str, back_url: str) -> str:
+def _browser_html(cam_name: str, eid: str, back_url: str, all_entries: list[dict] | None = None) -> str:
     css = _SD_CSS + _SD_CSS2
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -324,24 +374,77 @@ def _browser_html(cam_name: str, eid: str, back_url: str) -> str:
     <h1>\U0001f4f9 {cam_name}</h1>
     <div class="subtitle" id="stats">Seleziona un mese</div>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn btn-delete" id="btn-clear" onclick="clearCache()" style="display:none">\U0001f5d1\ufe0f Svuota cache</button>
-  </div>
 </div>
 <div class="layout">
-  <div class="sidebar" id="sidebar"><div class="empty" style="padding:16px;font-size:0.85em">\u23f3 Caricamento...</div></div>
-  <div class="main-panel">
-    <div id="cal-section" style="display:none">
-      <div class="cal-nav"><div class="cal-month" id="cal-month-label"></div></div>
-      <div class="cal-grid" id="cal-grid"></div>
+  <div class="sidebar" id="sidebar-wrap">
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="btn" id="btn-multicam" onclick="openMultiCam()" style="display:none">\U0001f3ac Multi-cam</button>
+      <button class="btn btn-delete" id="btn-clear" onclick="clearCache()" style="display:none">\U0001f5d1 Svuota cache</button>
     </div>
+    <div id="sidebar"><div class="empty" style="padding:16px;font-size:0.85em">\u23f3 Caricamento...</div></div>
+    <div id="cal-section" style="display:none;margin-top:8px">
+      <div class="cal-nav" style="margin-bottom:4px"><div class="cal-month" id="cal-month-label" style="font-size:0.8em"></div></div>
+      <div class="cal-grid" id="cal-grid" style="gap:2px"></div>
+    </div>
+  </div>
+  <div class="main-panel">
     <div id="day-label" style="color:#4fc3f7;font-size:0.95em;margin-bottom:8px;display:none"></div>
+    <div id="sticky-player" style="display:none">
+      <video id="main-video" preload="none" style="width:100%;border-radius:8px;background:#000"></video>
+      <div class="pb-progress" onclick="seekVideo(event)"><div class="pb-progress-bar" id="pb-bar" style="width:0%"></div></div>
+      <div class="pb-controls">
+        <button onclick="playerPrev()" title="Precedente">&#9198;</button>
+        <button onclick="playerSkip(-5)" title="-5s">&#9664;&#9664;</button>
+        <button id="pb-play-btn" onclick="playerToggle()">&#9654;</button>
+        <button onclick="playerSkip(5)" title="+5s">&#9654;&#9654;</button>
+        <button onclick="playerNext()" title="Successivo">&#9197;</button>
+        <span class="pb-time" id="pb-time">0:00 / 0:00</span>
+        <span class="pb-sep"></span>
+        <button onclick="setSpeed(0.5)">0.5x</button>
+        <button class="spd-active" onclick="setSpeed(1)">1x</button>
+        <button onclick="setSpeed(2)">2x</button>
+        <button onclick="setSpeed(4)">4x</button>
+        <button onclick="setSpeed(8)">8x</button>
+        <span class="pb-sep"></span>
+        <button onclick="playerMute()" id="pb-mute" title="Mute">&#128266;</button>
+        <button onclick="playerScreenshot()" title="Screenshot">&#128247;</button>
+        <span style="margin-left:auto;font-size:0.78em;color:#888" id="pb-label"></span>
+      </div>
+      <div class="pb-file-info" id="pb-info"></div>
+    </div>
+    <div class="tl-wrap" id="tl-wrap">
+      <div class="tl-controls">
+        <button onclick="tlZoomIn()">+</button>
+        <button onclick="tlZoomOut()">&#8722;</button>
+        <button onclick="tlReset()">24h</button>
+        <span class="info" id="tl-info"></span>
+      </div>
+      <div class="tl-hours" id="tl-hours"></div>
+      <div class="tl-track-row"><span class="tl-track-label">Rec</span><div class="tl-track" id="tl-rec"></div></div>
+      <div class="tl-track-row"><span class="tl-track-label">Alarm</span><div class="tl-track" id="tl-alarm"></div></div>
+      <div class="tl-scrollbar-row" id="tl-scroll-row" style="display:none">
+        <button class="tl-pan-btn" onclick="tlPan(-1)">&#9664;</button>
+        <div class="tl-scrollbar" id="tl-scrollbar"><div class="tl-scrollbar-thumb" id="tl-thumb"></div></div>
+        <button class="tl-pan-btn" onclick="tlPan(1)">&#9654;</button>
+      </div>
+      <div class="tl-legend"><span class="ld rec"></span>Rec <span class="ld alarm"></span>Alarm <span class="ld cache"></span>Cache</div>
+    </div>
     <div class="counter" id="counter" style="display:none"></div>
     <div class="toolbar" id="toolbar" style="display:none">
       <button class="btn" id="btn-sel-all" onclick="toggleSelectAll()">\u2611\ufe0f Tutti</button>
       <button class="btn" id="btn-sel-range" onclick="selectRange()">\U0001f4cf Intervallo</button>
       <button class="btn btn-merge" id="btn-merge" onclick="doMerge()" disabled>\U0001f517 Unisci</button>
       <button class="btn" id="btn-refresh" onclick="refreshDay()">\U0001f504 Aggiorna</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="btn-toggle-list" onclick="toggleFileList()">\U0001f4cb Lista file</button>
+      <input type="text" id="goto-time" placeholder="HH:MM:SS" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid #444;background:#222;color:#e1e1e1;font-size:0.8em">
+      <button class="btn" onclick="goToTime()">\U0001f50d Vai</button>
+    </div>
+    <div id="clip-bar" style="display:none;margin-bottom:12px;gap:6px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:0.8em;color:#888">Clip:</span>
+      <input type="text" id="clip-start" placeholder="Da HH:MM" style="width:70px;padding:4px 8px;border-radius:6px;border:1px solid #444;background:#222;color:#e1e1e1;font-size:0.8em">
+      <input type="text" id="clip-end" placeholder="A HH:MM" style="width:70px;padding:4px 8px;border-radius:6px;border:1px solid #444;background:#222;color:#e1e1e1;font-size:0.8em">
+      <button class="btn" id="btn-clip" onclick="downloadClip()">\u2702\ufe0f Scarica clip</button>
     </div>
     <div class="filter-bar" id="filter-bar" style="display:none">
       <button class="filter-btn active" id="flt-all" onclick="setFilter('all')">Tutti</button>
@@ -350,17 +453,21 @@ def _browser_html(cam_name: str, eid: str, back_url: str) -> str:
       <button class="filter-btn" id="flt-merged" onclick="setFilter('merged')">\U0001f517 Uniti</button>
       <button class="filter-btn" id="flt-cached" onclick="setFilter('cached')">\U0001f4be In cache</button>
     </div>
-    <div id="file-list"></div>
+    <div id="file-list" style="display:none"></div>
   </div>
+</div>
+<div id="multicam-overlay" style="display:none;position:fixed;inset:0;background:#111;z-index:100;overflow:auto;padding:16px">
+  <div id="multicam-content"></div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
-""" + _browser_js(eid) + """
+""" + _browser_js(eid, all_entries or []) + """
 </script></body></html>"""
 
 
-def _browser_js(eid: str) -> str:
-    return _JS_TEMPLATE.replace("__EID__", eid)
+def _browser_js(eid: str, all_entries: list[dict] | None = None) -> str:
+    entries_json = json.dumps(all_entries or [], ensure_ascii=True)
+    return _JS_TEMPLATE.replace("__EID__", eid).replace("__ALL_ENTRIES__", entries_json)
 
 
 _JS_TEMPLATE = r"""
@@ -378,6 +485,10 @@ let curYear,curMonth,curDay=null;
 let dayFiles=[],dayMerged=[],cachedSet=new Set(),usedSet=new Set();
 let daysWithData={},allSelectMode=false,currentFilter='all';
 let sdMonths=[],cacheStats={};
+let prefetchInFlight=new Set();
+let activeVideoIdx=null;
+let currentSpeed=1;
+let cachePollingId=null;
 
 (function(){loadSidebar()})();
 
@@ -420,11 +531,17 @@ async function selectMonth(ym){
   curYear=y;curMonth=m;curDay=null;daysWithData={};
   renderSidebar();
   document.getElementById('cal-section').style.display='block';
-  document.getElementById('file-list').innerHTML='';
+  document.getElementById('sticky-player').style.display='none';
   document.getElementById('day-label').style.display='none';
+  document.getElementById('tl-wrap').style.display='none';
+  document.getElementById('file-list').innerHTML='';document.getElementById('file-list').style.display='none';
   document.getElementById('counter').style.display='none';
   document.getElementById('toolbar').style.display='none';
   document.getElementById('filter-bar').style.display='none';
+  document.getElementById('clip-bar').style.display='none';
+  // Stop video
+  const vid=document.getElementById('main-video');if(vid){vid.pause();vid.removeAttribute('src');vid.load()}
+  activeVideoIdx=null;stopCachePolling();
   document.getElementById('stats').textContent='Caricamento '+MI[m]+'...';
   renderCalendar();
   await loadMonthIndex(y,m);
@@ -472,7 +589,7 @@ async function showDay(day){
   const dk=ym+dd;
   document.getElementById('day-label').style.display='block';
   document.getElementById('day-label').textContent=day+' '+MI[curMonth]+' '+curYear+' \u2014 caricamento...';
-  document.getElementById('file-list').innerHTML='<div class="empty"><div class="spinner"></div> Caricamento...</div>';
+  document.getElementById('sticky-player').style.display='none';
   try{
     const r=await fetch(IX+'?day='+dk);const data=await r.json();
     dayFiles=data.files||[];dayMerged=data.merged||[];
@@ -481,8 +598,10 @@ async function showDay(day){
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
     document.getElementById('flt-all').classList.add('active');
     renderFileList();
+    renderTimeline();
+    document.getElementById('day-label').textContent=day+' '+MI[curMonth]+' '+curYear+' \u2014 '+dayFiles.length+' file \u2014 Clicca sulla timeline per riprodurre';
   }catch(e){
-    document.getElementById('file-list').innerHTML='<div class="empty">Errore: '+e.message+'</div>';
+    document.getElementById('day-label').textContent='Errore: '+e.message;
   }
 }
 """
@@ -498,6 +617,7 @@ function refreshDay(){
     dayFiles=data.files||[];dayMerged=data.merged||[];
     cachedSet=new Set(data.cached||[]);usedSet=new Set(data.used||[]);
     renderFileList();
+    renderTimeline();
     daysWithData[dk]=dayFiles.length||undefined;
     if(!dayFiles.length)delete daysWithData[dk];
     renderCalendar();showToast('Lista aggiornata');
@@ -510,18 +630,21 @@ function setFilter(f){
   const ids={all:'flt-all',alarm:'flt-alarm',rec:'flt-rec',merged:'flt-merged',cached:'flt-cached'};
   document.getElementById(ids[f]).classList.add('active');
   renderFileList();
+  renderTimeline();
 }
 
 function renderFileList(){
   const day=curDay;
-  const cachedCount=dayFiles.filter(f=>cachedSet.has(f.name.replace('.264',''))).length;
-  const usedCount=dayFiles.filter(f=>usedSet.has(f.name.replace('.264',''))).length;
+  const cachedCount=dayFiles.filter(f=>cachedSet.has(f.name.replace('.264','').replace('.265',''))).length;
+  const usedCount=dayFiles.filter(f=>usedSet.has(f.name.replace('.264','').replace('.265',''))).length;
   document.getElementById('day-label').textContent=day+' '+MI[curMonth]+' '+curYear+' \u2014 '+dayFiles.length+' file';
   document.getElementById('counter').style.display='block';
   document.getElementById('counter').textContent='\ud83d\udcbe '+cachedCount+'/'+dayFiles.length+' in cache | \u2713 '+usedCount+' gi\u00e0 uniti | \ud83d\udd17 '+dayMerged.length+' merged';
   document.getElementById('toolbar').style.display=dayFiles.length||dayMerged.length?'flex':'none';
   document.getElementById('filter-bar').style.display=dayFiles.length||dayMerged.length?'flex':'none';
   document.getElementById('btn-clear').style.display=cachedCount>0||dayMerged.length>0?'':'none';
+  document.getElementById('btn-multicam').style.display=dayFiles.length?'':'none';
+  document.getElementById('clip-bar').style.display=dayFiles.length?'flex':'none';
   let html='';
 """
 
@@ -545,7 +668,7 @@ _JS_TEMPLATE += r"""
   }
   // Source files
   dayFiles.forEach((f,i)=>{
-    const name=f.name;const baseName=name.replace('.264','');
+    const name=f.name;const baseName=name.replace('.264','').replace('.265','');
     const isAlarm=name[0]==='A';const isRec=name[0]==='P';
     const isCached=cachedSet.has(baseName);const isUsed=usedSet.has(baseName);
     if(currentFilter==='alarm'&&!isAlarm)return;
@@ -579,55 +702,91 @@ function escH(s){const d=document.createElement('div');d.textContent=s;return d.
 
 _JS_TEMPLATE += r"""
 async function togglePlay(idx,url,isCached){
-  const row=document.getElementById('row-'+idx);
-  if(row.classList.contains('active')){
-    row.classList.remove('active');const p=row.querySelector('.player');
-    if(p){const v=p.querySelector('video');if(v){v.pause();v.src=''}p.remove()}return;
+  const vid=document.getElementById('main-video');
+  // If clicking same file, toggle pause
+  if(activeVideoIdx===idx&&vid.src){
+    if(vid.paused){vid.play();document.getElementById('pb-play-btn').textContent='\u23f8'}
+    else{vid.pause();document.getElementById('pb-play-btn').textContent='\u25b6'}
+    return;
   }
-  document.querySelectorAll('.file-row.active').forEach(r=>{
-    r.classList.remove('active');const p=r.querySelector('.player');
-    if(p){const v=p.querySelector('video');if(v){v.pause();v.src=''}p.remove()}
-  });
-  if(!isCached){
-    const f=dayFiles[idx];if(!f)return;
-    row.classList.add('active');
-    const player=document.createElement('div');player.className='player';
-    player.innerHTML='<div style="padding:16px;text-align:center"><div class="spinner"></div><div style="margin-top:8px;color:#888;font-size:0.85em" id="dl-status-'+idx+'">Download in corso...</div></div>';
-    row.appendChild(player);
-    const iconEl=row.querySelector('.file-icon');if(iconEl)iconEl.textContent='\u23f3';
+  // Stop current
+  vid.pause();vid.removeAttribute('src');vid.load();
+  activeVideoIdx=idx;startCachePolling();
+  document.getElementById('sticky-player').style.display='block';
+  const f=dayFiles[idx];if(!f)return;
+  const bn=f.name.replace('.264','').replace('.265','');
+  // Update info
+  updatePlayerInfo(idx,f);
+  renderTimeline();
+  if(!isCached&&!cachedSet.has(bn)){
+    document.getElementById('pb-info').textContent='\u23f3 Scaricamento...';
+    document.getElementById('pb-play-btn').textContent='\u23f3';
     try{
       const r=await fetch(DL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,path:f.path,full:f.full})});
       const data=await r.json();
-      if(data.error){showToast('Errore: '+data.error);player.remove();row.classList.remove('active');if(iconEl)iconEl.textContent='\u2601\ufe0f';return}
-      cachedSet.add(f.name.replace('.264',''));
-      if(iconEl)iconEl.textContent='\ud83d\udcbe';
-      row.dataset.cached='1';
-      const mp4Url=CF+ENTRY+'_'+f.name.replace('.264','')+'.mp4';
-      player.innerHTML='<video controls preload="none" style="width:100%;border-radius:8px;margin-top:8px"></video>';
-      player.querySelector('video').src=mp4Url;player.querySelector('video').play();
-      showToast('\u2705 Scaricato e convertito');
-      const cc=document.getElementById('counter');
-      if(cc){const nc=dayFiles.filter(x=>cachedSet.has(x.name.replace('.264',''))).length;
-      const uc=dayFiles.filter(x=>usedSet.has(x.name.replace('.264',''))).length;
-      cc.textContent='\ud83d\udcbe '+nc+'/'+dayFiles.length+' in cache | \u2713 '+uc+' gi\u00e0 uniti | \ud83d\udd17 '+dayMerged.length+' merged'}
-    }catch(e){showToast('Errore download: '+e.message);player.remove();row.classList.remove('active');if(iconEl)iconEl.textContent='\u2601\ufe0f'}
-    return;
+      if(data.error){showToast('Errore: '+data.error);activeVideoIdx=null;return}
+      cachedSet.add(bn);
+      updateCounter();
+      // Update file list row if visible
+      const row=document.getElementById('row-'+idx);
+      if(row){const ic=row.querySelector('.file-icon');if(ic)ic.textContent='\ud83d\udcbe';row.dataset.cached='1'}
+    }catch(e){showToast('Errore download: '+e.message);activeVideoIdx=null;return}
   }
-  row.classList.add('active');
-  const player=document.createElement('div');player.className='player';
-  player.innerHTML='<video controls preload="none" style="width:100%;border-radius:8px;margin-top:8px"></video>';
-  row.appendChild(player);player.querySelector('video').src=url;player.querySelector('video').play();
+  const mp4Url=CF+ENTRY+'_'+bn+'.mp4';
+  vid.src=mp4Url;vid.playbackRate=currentSpeed;vid.play();
+  document.getElementById('pb-play-btn').textContent='\u23f8';
+  updatePlayerInfo(idx,f);
+  prefetchNext(idx,2);
 }
+function updatePlayerInfo(idx,f){
+  document.getElementById('pb-label').textContent=(idx+1)+'/'+dayFiles.length;
+  const info=document.getElementById('pb-info');
+  if(f&&f.name.length>=22&&f.name[7]==='_'){
+    const ts=f.name.substring(8,10)+':'+f.name.substring(10,12)+':'+f.name.substring(12,14);
+    const te=f.name.substring(15,17)+':'+f.name.substring(17,19)+':'+f.name.substring(19,21);
+    const prefix=f.name[0]==='A'?'\ud83d\udd34 Allarme':'\ud83d\udcf9 Rec';
+    info.textContent=prefix+' '+ts+' \u2192 '+te;
+  }else{info.textContent=''}
+  // Update day label
+  document.getElementById('day-label').textContent=curDay+' '+MI[curMonth]+' '+curYear+' \u2014 '+(idx+1)+'/'+dayFiles.length;
+}
+// Init main video events
+(function(){
+  const vid=document.getElementById('main-video');if(!vid)return;
+  vid.addEventListener('timeupdate',function(){
+    const bar=document.getElementById('pb-bar');
+    const timeEl=document.getElementById('pb-time');
+    if(bar&&vid.duration)bar.style.width=(vid.currentTime/vid.duration*100)+'%';
+    if(timeEl)timeEl.textContent=fmtDur(vid.currentTime)+' / '+fmtDur(vid.duration||0);
+  });
+  vid.addEventListener('loadedmetadata',function(){
+    document.getElementById('pb-time').textContent='0:00 / '+fmtDur(vid.duration);
+  });
+  vid.addEventListener('ended',function(){onVideoEnded(activeVideoIdx)});
+  vid.addEventListener('error',function(){onVideoError(activeVideoIdx)});
+})();
+function toggleFileList(){
+  const fl=document.getElementById('file-list');
+  fl.style.display=fl.style.display==='none'?'block':'none';
+}
+function fmtDur(s){if(!s||isNaN(s))return '0:00';const m=Math.floor(s/60);const sec=Math.floor(s%60);return m+':'+String(sec).padStart(2,'0')}
+function getActiveVideo(){return document.getElementById('main-video')}
+function playerToggle(){const v=getActiveVideo();if(!v)return;if(v.paused){v.play();document.getElementById('pb-play-btn').textContent='\u23f8'}else{v.pause();document.getElementById('pb-play-btn').textContent='\u25b6'}}
+function playerSkip(s){const v=getActiveVideo();if(v)v.currentTime+=s}
+function playerPrev(){if(activeVideoIdx>0)playByIdx(activeVideoIdx-1)}
+function playerNext(){if(activeVideoIdx<dayFiles.length-1)playByIdx(activeVideoIdx+1)}
+function setSpeed(s){currentSpeed=s;const v=getActiveVideo();if(v)v.playbackRate=s;document.querySelectorAll('.pb-controls button').forEach(b=>{if(b.textContent.endsWith('x')){b.className=parseFloat(b.textContent)===s?'spd-active':''}});}
+function playerMute(){const v=getActiveVideo();if(!v)return;v.muted=!v.muted;const btn=document.getElementById('pb-mute');if(btn)btn.innerHTML=v.muted?'&#128263;':'&#128266;'}
+function playerScreenshot(){const v=getActiveVideo();if(!v)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);const a=document.createElement('a');a.download='screenshot_'+new Date().toISOString().replace(/[:.]/g,'-')+'.jpg';a.href=c.toDataURL('image/jpeg',0.95);a.click()}
+function seekVideo(e){const v=getActiveVideo();if(!v||!v.duration)return;const rect=e.currentTarget.getBoundingClientRect();v.currentTime=((e.clientX-rect.left)/rect.width)*v.duration}
 function playMerged(el,url){
-  const row=el.closest('.file-row');
-  if(row.classList.contains('active')){
-    row.classList.remove('active');const p=row.querySelector('.player');
-    if(p){const v=p.querySelector('video');if(v){v.pause();v.src=''}p.remove()}return;
-  }
-  row.classList.add('active');
-  const player=document.createElement('div');player.className='player';
-  player.innerHTML='<video controls preload="none" style="width:100%;border-radius:8px;margin-top:8px"></video>';
-  row.appendChild(player);player.querySelector('video').src=url;player.querySelector('video').play();
+  const vid=document.getElementById('main-video');
+  document.getElementById('sticky-player').style.display='block';
+  vid.src=url;vid.playbackRate=currentSpeed;vid.play();
+  document.getElementById('pb-play-btn').textContent='\u23f8';
+  document.getElementById('pb-info').textContent='\ud83d\udd17 Merged';
+  document.getElementById('pb-label').textContent='';
+  activeVideoIdx=null;
 }
 function toggleSelectAll(){
   allSelectMode=!allSelectMode;
@@ -690,6 +849,401 @@ async function clearCache(){
 function showToast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3000);
+}
+"""
+
+_JS_TEMPLATE += r"""
+function prefetchNext(fromIdx,count){
+  if(!count)count=2;
+  for(let n=1;n<=count;n++){
+    const ni=fromIdx+n;
+    if(ni>=dayFiles.length)break;
+    const f=dayFiles[ni];
+    const bn=f.name.replace('.264','').replace('.265','');
+    if(cachedSet.has(bn)||prefetchInFlight.has(bn))continue;
+    prefetchInFlight.add(bn);
+    fetch(DL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,path:f.path,full:f.full})})
+    .then(r=>r.json()).then(d=>{
+      prefetchInFlight.delete(bn);
+      if(d.ok||d.cached){
+        cachedSet.add(bn);
+        const row=document.getElementById('row-'+ni);
+        if(row){
+          const ic=row.querySelector('.file-icon');if(ic)ic.textContent='\ud83d\udcbe';
+          row.dataset.cached='1';
+        }
+        updateCounter();
+      }
+    }).catch(()=>prefetchInFlight.delete(bn));
+  }
+}
+function updateCounter(){
+  const cc=document.getElementById('counter');
+  if(!cc)return;
+  const nc=dayFiles.filter(x=>cachedSet.has(x.name.replace('.264','').replace('.265',''))).length;
+  const uc=dayFiles.filter(x=>usedSet.has(x.name.replace('.264','').replace('.265',''))).length;
+  cc.textContent='\ud83d\udcbe '+nc+'/'+dayFiles.length+' in cache | \u2713 '+uc+' gi\u00e0 uniti | \ud83d\udd17 '+dayMerged.length+' merged';
+}
+function playByIdx(idx){
+  const f=dayFiles[idx];if(!f)return;
+  const bn=f.name.replace('.264','').replace('.265','');
+  const isCached=cachedSet.has(bn);
+  const url=isCached?CF+ENTRY+'_'+bn+'.mp4':'';
+  togglePlay(idx,url,isCached);
+}
+function onVideoEnded(idx){
+  if(idx+1<dayFiles.length){
+    const nf=dayFiles[idx+1];
+    const nb=nf.name.replace('.264','').replace('.265','');
+    if(cachedSet.has(nb)){
+      playByIdx(idx+1);
+      const row=document.getElementById('row-'+(idx+1));
+      if(row)row.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }else{
+      showToast('\u23f3 Scaricamento prossimo file...');
+      playByIdx(idx+1);
+      const row=document.getElementById('row-'+(idx+1));
+      if(row)row.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  }
+}
+function onVideoError(idx){
+  const v=getActiveVideo();
+  if(v&&(!v.src||v.src===window.location.href))return;
+  showToast('\u26a0\ufe0f Errore video, passo al successivo');
+  if(idx+1<dayFiles.length){
+    setTimeout(()=>playByIdx(idx+1),500);
+  }
+}
+function startCachePolling(){
+  stopCachePolling();
+  cachePollingId=setInterval(async()=>{
+    try{
+      const r=await fetch(IX+'?day='+String(curYear%100).padStart(2,'0')+String(curMonth+1).padStart(2,'0')+String(curDay).padStart(2,'0'));
+      const data=await r.json();
+      const newCached=new Set(data.cached||[]);
+      let changed=false;
+      newCached.forEach(n=>{if(!cachedSet.has(n)){cachedSet.add(n);changed=true;
+        dayFiles.forEach((f,i)=>{const bn=f.name.replace('.264','').replace('.265','');if(bn===n){
+          const row=document.getElementById('row-'+i);if(row){const ic=row.querySelector('.file-icon');if(ic)ic.textContent='\ud83d\udcbe';row.dataset.cached='1';}
+        }});
+      }});
+      if(changed)updateCounter();
+    }catch(e){}
+  },10000);
+}
+function stopCachePolling(){if(cachePollingId){clearInterval(cachePollingId);cachePollingId=null}}
+"""
+
+_JS_TEMPLATE += r"""
+function goToTime(){
+  const input=document.getElementById('goto-time');
+  if(!input||!input.value)return;
+  const parts=input.value.split(':').map(Number);
+  const targetSecs=(parts[0]||0)*3600+(parts[1]||0)*60+(parts[2]||0);
+  let bestIdx=-1,bestDist=Infinity;
+  dayFiles.forEach((f,i)=>{
+    if(f.name.length<22||f.name[7]!=='_')return;
+    const sh=+f.name.slice(8,10),sm=+f.name.slice(10,12),ss=+f.name.slice(12,14);
+    const dist=Math.abs(sh*3600+sm*60+ss-targetSecs);
+    if(dist<bestDist){bestDist=dist;bestIdx=i}
+  });
+  if(bestIdx>=0){
+    playByIdx(bestIdx);
+    const row=document.getElementById('row-'+bestIdx);
+    if(row)row.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }else{showToast('Nessun file trovato')}
+}
+async function downloadClip(){
+  const csEl=document.getElementById('clip-start'),ceEl=document.getElementById('clip-end');
+  if(!csEl||!ceEl||!csEl.value||!ceEl.value){showToast('Inserisci orario Da e A');return}
+  const sp=csEl.value.split(':').map(Number),ep=ceEl.value.split(':').map(Number);
+  const startSecs=(sp[0]||0)*3600+(sp[1]||0)*60+(sp[2]||0);
+  const endSecs=(ep[0]||0)*3600+(ep[1]||0)*60+(ep[2]||0);
+  const clipFiles=dayFiles.filter(f=>{
+    if(f.name.length<22||f.name[7]!=='_')return false;
+    const sh=+f.name.slice(8,10),sm=+f.name.slice(10,12),ss=+f.name.slice(12,14);
+    const eh=+f.name.slice(15,17),em=+f.name.slice(17,19),es=+f.name.slice(19,21);
+    const fStart=sh*3600+sm*60+ss;
+    const fEnd=eh>=99?86400:eh*3600+em*60+es;
+    return fEnd>startSecs&&fStart<endSecs;
+  });
+  if(!clipFiles.length){showToast('Nessun file nell\'intervallo');return}
+  const btn=document.getElementById('btn-clip');
+  btn.disabled=true;btn.textContent='\u23f3 Scaricamento...';
+  try{
+    if(clipFiles.length===1){
+      await fetch(DL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:clipFiles[0].name,path:clipFiles[0].path,full:clipFiles[0].full})});
+      cachedSet.add(clipFiles[0].name.replace('.264','').replace('.265',''));
+      updateCounter();showToast('\u2705 File scaricato');
+    }else{
+      const r=await fetch(MR,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:clipFiles})});
+      const data=await r.json();
+      if(data.error)showToast('Errore: '+data.error);
+      else showToast('\u2705 Merge avviato per '+clipFiles.length+' file');
+    }
+  }catch(e){showToast('Errore: '+e.message)}
+  finally{btn.disabled=false;btn.textContent='\u2702\ufe0f Scarica clip'}
+}
+"""
+
+_JS_TEMPLATE += r"""
+let tlViewStart=0,tlViewSecs=86400,tlDragging=false,tlDragStartX=0,tlDragOffset=0;
+const TL_MIN=1800,TL_MAX=86400;
+function tlFmtShort(s){return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0')}
+function tlFmt(s){return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')}
+function tlParseTime(name){
+  if(name.length<22||name[7]!=='_'||name[14]!=='_')return null;
+  const sh=+name.slice(8,10),sm=+name.slice(10,12),ss=+name.slice(12,14);
+  const eh=+name.slice(15,17),em=+name.slice(17,19),es=+name.slice(19,21);
+  let start=sh*3600+sm*60+ss,end=eh*3600+em*60+es;
+  if(eh>=99){const n=new Date();end=n.getHours()*3600+n.getMinutes()*60+n.getSeconds()}
+  if(end>86400)end=86400;if(end<=start)end=start+1;
+  return{start,end,isAlarm:name[0]==='A'};
+}
+function renderTimeline(){
+  const wrap=document.getElementById('tl-wrap');
+  if(!dayFiles.length){wrap.style.display='none';return}
+  wrap.style.display='block';
+  const vEnd=tlViewStart+tlViewSecs;
+  // Info
+  const rc=dayFiles.filter(f=>f.name[0]!=='A').length;
+  const ac=dayFiles.length-rc;
+  const cc=dayFiles.filter(f=>cachedSet.has(f.name.replace('.264','').replace('.265',''))).length;
+  document.getElementById('tl-info').textContent=rc+' rec, '+ac+' alarm, '+cc+' cache';
+  // Hours
+  const hDiv=document.getElementById('tl-hours');hDiv.innerHTML='';
+  const step=tlViewSecs<=3600?300:tlViewSecs<=7200?600:tlViewSecs<=14400?1800:3600;
+  for(let s=Math.ceil(tlViewStart/step)*step;s<=vEnd;s+=step){
+    const sp=document.createElement('span');sp.style.left=((s-tlViewStart)/tlViewSecs*100)+'%';sp.textContent=tlFmtShort(s);hDiv.appendChild(sp);
+  }
+  // Tracks
+  renderTrack('tl-rec',false);renderTrack('tl-alarm',true);
+  // Scrollbar
+  const sr=document.getElementById('tl-scroll-row');
+  if(tlViewSecs<86400){sr.style.display='flex';const th=document.getElementById('tl-thumb');th.style.left=(tlViewStart/86400*100)+'%';th.style.width=(tlViewSecs/86400*100)+'%'}
+  else{sr.style.display='none'}
+}
+function renderTrack(id,isAlarm){
+  const track=document.getElementById(id);track.innerHTML='';
+  const vEnd=tlViewStart+tlViewSecs;
+  dayFiles.forEach((f,i)=>{
+    const t=tlParseTime(f.name);if(!t)return;
+    if(t.isAlarm!==isAlarm)return;
+    if(t.end<tlViewStart||t.start>vEnd)return;
+    const sS=Math.max(t.start,tlViewStart),sE=Math.min(t.end,vEnd);
+    const bn=f.name.replace('.264','').replace('.265','');
+    const isCached=cachedSet.has(bn);
+    const seg=document.createElement('div');
+    seg.className='tl-seg '+(isAlarm?'alarm':'rec')+(isCached?' cached':'')+(i===activeVideoIdx?' active':'');
+    seg.style.left=((sS-tlViewStart)/tlViewSecs*100)+'%';
+    seg.style.width=(Math.max((sE-sS)/tlViewSecs*100,0.15))+'%';
+    seg.title=tlFmt(t.start)+' \u2192 '+tlFmt(t.end);
+    seg.onclick=function(e){e.stopPropagation();playByIdx(i);const row=document.getElementById('row-'+i);if(row)row.scrollIntoView({behavior:'smooth',block:'nearest'})};
+    track.appendChild(seg);
+  });
+  // Events
+  track.onwheel=function(e){
+    e.preventDefault();
+    const rect=track.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)/rect.width;
+    const mt=tlViewStart+mx*tlViewSecs;
+    const factor=e.deltaY>0?1.3:0.77;
+    let nv=Math.round(tlViewSecs*factor);
+    nv=Math.max(TL_MIN,Math.min(TL_MAX,nv));
+    tlViewSecs=nv;tlViewStart=Math.max(0,Math.min(86400-nv,mt-mx*nv));
+    renderTimeline();
+  };
+  track.onmousedown=function(e){
+    if(e.target.classList.contains('tl-seg'))return;
+    tlDragging=true;tlDragStartX=e.clientX;tlDragOffset=tlViewStart;e.preventDefault();
+  };
+  track.onmousemove=function(e){
+    if(tlDragging)return;
+    const rect=track.getBoundingClientRect();
+    const x=e.clientX-rect.left;
+    // Remove old needle
+    const old=track.querySelector('.tl-needle');if(old)old.remove();
+    const needle=document.createElement('div');needle.className='tl-needle';needle.style.left=x+'px';
+    const label=document.createElement('span');label.className='tl-needle-label';
+    label.textContent=tlFmt(Math.round(tlViewStart+(x/rect.width)*tlViewSecs));
+    needle.appendChild(label);track.appendChild(needle);
+  };
+  track.onmouseleave=function(){const n=track.querySelector('.tl-needle');if(n)n.remove()};
+}
+document.addEventListener('mousemove',function(e){
+  if(!tlDragging)return;
+  const tw=document.getElementById('tl-rec').clientWidth||800;
+  tlViewStart=Math.max(0,Math.min(86400-tlViewSecs,tlDragOffset-(e.clientX-tlDragStartX)*(tlViewSecs/tw)));
+  renderTimeline();
+});
+document.addEventListener('mouseup',function(){tlDragging=false});
+function tlZoomIn(){const c=tlViewStart+tlViewSecs/2;const nv=Math.max(TL_MIN,Math.round(tlViewSecs*0.5));tlViewSecs=nv;tlViewStart=Math.max(0,Math.min(86400-nv,c-nv/2));renderTimeline()}
+function tlZoomOut(){const c=tlViewStart+tlViewSecs/2;const nv=Math.min(TL_MAX,Math.round(tlViewSecs*2));tlViewSecs=nv;tlViewStart=Math.max(0,Math.min(86400-nv,c-nv/2));renderTimeline()}
+function tlReset(){tlViewSecs=86400;tlViewStart=0;renderTimeline()}
+function tlPan(dir){const step=tlViewSecs*0.3;tlViewStart=Math.max(0,Math.min(86400-tlViewSecs,tlViewStart+dir*step));renderTimeline()}
+// Scrollbar drag
+(function(){
+  const sb=document.getElementById('tl-scrollbar');if(!sb)return;
+  sb.onmousedown=function(e){
+    const rect=sb.getBoundingClientRect();
+    const thumbLeft=tlViewStart/86400*rect.width;
+    const thumbWidth=tlViewSecs/86400*rect.width;
+    const x=e.clientX-rect.left;
+    if(x<thumbLeft||x>thumbLeft+thumbWidth){
+      const ct=(x/rect.width)*86400;
+      tlViewStart=Math.max(0,Math.min(86400-tlViewSecs,ct-tlViewSecs/2));
+      renderTimeline();return;
+    }
+    const startX=e.clientX,startOff=tlViewStart;
+    const onMove=function(ev){const dx=ev.clientX-startX;const dt=(dx/rect.width)*86400;tlViewStart=Math.max(0,Math.min(86400-tlViewSecs,startOff+dt));renderTimeline()};
+    const onUp=function(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp)};
+    document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+    e.preventDefault();
+  };
+})();
+"""
+
+_JS_TEMPLATE += r"""
+let mcCamFiles={},mcRefs={},mcAudioCam=null,mcSpeed=1,mcPrefetching=new Set(),mcCachedSets={};
+function openMultiCam(){
+  document.getElementById('multicam-overlay').style.display='block';
+  const allEntries=__ALL_ENTRIES__;
+  let html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="margin:0">\ud83c\udfac Multi-cam sincronizzato</h2><button class="btn" onclick="closeMultiCam()">Chiudi</button></div>';
+  html+='<div style="margin-bottom:12px">';
+  allEntries.forEach(e=>{
+    html+='<label style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;margin-bottom:8px;cursor:pointer"><input type="checkbox" class="mc-cam-chk" value="'+e.id+'" data-name="'+escH(e.name)+'"> '+escH(e.name)+'</label>';
+  });
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">';
+  html+='<span style="font-size:0.85em;color:#888">Orario:</span>';
+  html+='<input type="text" id="mc-time" value="12:00:00" placeholder="HH:MM:SS" style="width:90px;padding:4px 8px;border-radius:6px;border:1px solid #444;background:#222;color:#e1e1e1;font-size:0.85em">';
+  html+='<button class="btn" id="mc-start-btn" onclick="startMultiCam()">Avvia</button>';
+  html+='</div>';
+  html+='<div id="mc-player-area"></div>';
+  document.getElementById('multicam-content').innerHTML=html;
+}
+function closeMultiCam(){
+  Object.values(mcRefs).forEach(v=>{if(v){v.pause();v.src=''}});
+  mcRefs={};mcCamFiles={};mcAudioCam=null;
+  document.getElementById('multicam-overlay').style.display='none';
+}
+async function startMultiCam(){
+  const checks=document.querySelectorAll('.mc-cam-chk:checked');
+  if(checks.length<2){showToast('Seleziona almeno 2 camere');return}
+  const cams=[];checks.forEach(c=>cams.push({id:c.value,name:c.dataset.name}));
+  const timeStr=document.getElementById('mc-time').value||'12:00:00';
+  const tp=timeStr.split(':').map(Number);
+  const targetSecs=(tp[0]||0)*3600+(tp[1]||0)*60+(tp[2]||0);
+  const ym=String(curYear%100).padStart(2,'0')+String(curMonth+1).padStart(2,'0');
+  const dk=ym+String(curDay).padStart(2,'0');
+  const btn=document.getElementById('mc-start-btn');
+  btn.disabled=true;btn.textContent='\u23f3 Caricamento...';
+  const area=document.getElementById('mc-player-area');
+  const cols=cams.length<=2?2:cams.length<=4?2:3;
+  let gridHtml='<div style="display:flex;gap:6px;margin-bottom:12px;align-items:center;flex-wrap:wrap">';
+  gridHtml+='<button class="btn" onclick="mcPlayAll()">\u25b6 Play</button>';
+  gridHtml+='<button class="btn" onclick="mcPauseAll()">\u23f8 Pausa</button>';
+  gridHtml+='<span class="pb-sep"></span>';
+  [0.5,1,2,4,8].forEach(s=>{gridHtml+='<button class="btn'+(mcSpeed===s?' spd-active':'')+'" onclick="mcSetSpeed('+s+')" style="padding:4px 8px;font-size:0.8em">'+s+'x</button>'});
+  gridHtml+='</div>';
+  gridHtml+='<div class="mc-grid" style="grid-template-columns:repeat('+cols+',1fr)">';
+  cams.forEach(c=>{
+    gridHtml+='<div class="mc-cell" id="mc-cell-'+c.id+'">'
+      +'<video id="mc-vid-'+c.id+'" muted></video>'
+      +'<div class="mc-label">'+escH(c.name)+'</div>'
+      +'<div class="mc-status" id="mc-st-'+c.id+'">In attesa...</div>'
+      +'<div class="mc-btns">'
+      +'<button onclick="mcToggleAudio(\''+c.id+'\')" id="mc-aud-'+c.id+'">&#128263;</button>'
+      +'<button onclick="mcScreenshot(\''+c.id+'\')">&#128247;</button>'
+      +'</div></div>';
+  });
+  gridHtml+='</div>';
+  area.innerHTML=gridHtml;
+  cams.forEach(c=>{mcRefs[c.id]=document.getElementById('mc-vid-'+c.id)});
+  // Fase 1: scarica file per ogni cam in parallelo
+  await Promise.all(cams.map(async(cam)=>{
+    const st=document.getElementById('mc-st-'+cam.id);
+    try{
+      st.textContent='Caricamento indice...';
+      const r=await fetch('/api/hi3510/sd/'+cam.id+'/index?day='+dk);
+      const data=await r.json();
+      mcCamFiles[cam.id]=data.files||[];
+      mcCachedSets[cam.id]=new Set(data.cached||[]);
+      let best=null,bestDist=Infinity,bestIdx=-1;
+      (data.files||[]).forEach((f,i)=>{
+        if(f.name.length<22||f.name[7]!=='_')return;
+        const s=+f.name.slice(8,10)*3600+ +f.name.slice(10,12)*60+ +f.name.slice(12,14);
+        const e=+f.name.slice(15,17)>=99?86400:+f.name.slice(15,17)*3600+ +f.name.slice(17,19)*60+ +f.name.slice(19,21);
+        if(targetSecs>=s&&targetSecs<=e){best=f;bestDist=0;bestIdx=i;return}
+        const dist=Math.min(Math.abs(s-targetSecs),Math.abs(e-targetSecs));
+        if(dist<bestDist){bestDist=dist;best=f;bestIdx=i}
+      });
+      if(!best){st.textContent='Nessun file';return}
+      st.textContent='Scaricamento...';
+      await fetch('/api/hi3510/sd/'+cam.id+'/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:best.name,path:best.path,full:best.full})});
+      mcCachedSets[cam.id].add(best.name.replace('.264','').replace('.265',''));
+      st.textContent='Pronto';
+      const bn=best.name.replace('.264','').replace('.265','');
+      const url='/api/hi3510/cache_file/'+cam.id+'/'+cam.id+'_'+bn+'.mp4';
+      const vid=mcRefs[cam.id];
+      vid.src=url;
+      const fs=+best.name.slice(8,10)*3600+ +best.name.slice(10,12)*60+ +best.name.slice(12,14);
+      const seekTo=Math.max(0,targetSecs-fs);
+      await new Promise(res=>{vid.onloadeddata=()=>{vid.currentTime=seekTo;res()};vid.onerror=()=>res()});
+      mcPrefetchForCam(cam.id,bestIdx,2);
+      vid.onended=()=>mcAutoNext(cam.id);
+    }catch(e){st.textContent='Errore: '+e.message}
+  }));
+  // Fase 2: play tutti
+  cams.forEach(c=>{
+    const v=mcRefs[c.id];if(!v||!v.src)return;
+    v.playbackRate=mcSpeed;v.play();
+    const st=document.getElementById('mc-st-'+c.id);if(st)st.textContent='\u25b6 In riproduzione';
+  });
+  btn.disabled=false;btn.textContent='Avvia';
+}
+function mcPlayAll(){Object.values(mcRefs).forEach(v=>{if(v&&v.src)v.play()})}
+function mcPauseAll(){Object.values(mcRefs).forEach(v=>{if(v)v.pause()})}
+function mcSetSpeed(s){mcSpeed=s;Object.values(mcRefs).forEach(v=>{if(v)v.playbackRate=s});document.querySelectorAll('#mc-player-area .btn').forEach(b=>{if(b.textContent.endsWith('x'))b.className='btn'+(parseFloat(b.textContent)===s?' spd-active':'')})}
+function mcToggleAudio(cid){
+  const next=mcAudioCam===cid?null:cid;mcAudioCam=next;
+  Object.entries(mcRefs).forEach(([id,v])=>{
+    if(!v)return;v.muted=(id!==next);
+    const btn=document.getElementById('mc-aud-'+id);if(btn)btn.innerHTML=id===next?'&#128266;':'&#128263;';
+    const cell=document.getElementById('mc-cell-'+id);if(cell){if(id===next)cell.classList.add('audio-on');else cell.classList.remove('audio-on')}
+  });
+}
+function mcScreenshot(cid){const v=mcRefs[cid];if(!v)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);const a=document.createElement('a');a.download='mc_'+cid+'_'+new Date().toISOString().replace(/[:.]/g,'-')+'.jpg';a.href=c.toDataURL('image/jpeg',0.95);a.click()}
+function mcPrefetchForCam(cid,fromIdx,count){
+  const cf=mcCamFiles[cid]||[];const camCached=mcCachedSets[cid]||new Set();
+  for(let n=1;n<=count;n++){
+    const ni=fromIdx+n;if(ni>=cf.length)break;
+    const f=cf[ni];const bn=f.name.replace('.264','').replace('.265','');
+    const key=cid+'_'+bn;
+    if(camCached.has(bn)||mcPrefetching.has(key))continue;
+    mcPrefetching.add(key);
+    fetch('/api/hi3510/sd/'+cid+'/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,path:f.path,full:f.full})})
+    .then(()=>{mcPrefetching.delete(key);if(mcCachedSets[cid])mcCachedSets[cid].add(bn)})
+    .catch(()=>mcPrefetching.delete(key));
+  }
+}
+async function mcAutoNext(cid){
+  const cf=mcCamFiles[cid]||[];const v=mcRefs[cid];if(!v)return;
+  const currentUrl=v.src;
+  let currentIdx=-1;
+  cf.forEach((f,i)=>{const bn=f.name.replace('.264','').replace('.265','');if(currentUrl.includes(cid+'_'+bn))currentIdx=i});
+  if(currentIdx>=0&&currentIdx<cf.length-1){
+    const next=cf[currentIdx+1];
+    const bn=next.name.replace('.264','').replace('.265','');
+    try{
+      await fetch('/api/hi3510/sd/'+cid+'/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:next.name,path:next.path,full:next.full})});
+      if(mcCachedSets[cid])mcCachedSets[cid].add(bn);
+      v.src='/api/hi3510/cache_file/'+cid+'/'+cid+'_'+bn+'.mp4';
+      v.onloadeddata=()=>{v.playbackRate=mcSpeed;v.play()};
+      mcPrefetchForCam(cid,currentIdx+1,2);
+    }catch(e){}
+  }
 }
 """
 
@@ -784,8 +1338,8 @@ class Hi3510SdIndexView(HomeAssistantView):
         for m in merged_set:
             if m.startswith("MERGED_") and len(m) >= 13 and m[7:13] == day:
                 day_merged.add(m)
-        cached_names = [f["name"].replace(".264", "") for f in files if f["name"].replace(".264", "") in cached_set]
-        used_names = [f["name"].replace(".264", "") for f in files if f["name"].replace(".264", "") in used_set]
+        cached_names = [f["name"].replace(".264", "").replace(".265", "") for f in files if f["name"].replace(".264", "").replace(".265", "") in cached_set]
+        used_names = [f["name"].replace(".264", "").replace(".265", "") for f in files if f["name"].replace(".264", "").replace(".265", "") in used_set]
         return web.json_response({
             "day": day, "files": files, "cached": cached_names,
             "merged": list(day_merged), "used": used_names,
@@ -828,7 +1382,7 @@ class Hi3510SdMergeView(HomeAssistantView):
             for i, f in enumerate(files):
                 fname = f["name"]
                 full_path = f["full"]
-                base_name = fname.replace(".264", "")
+                base_name = fname.replace(".264", "").replace(".265", "")
                 cache_key = f"{entry_id}_{base_name}"
                 mp4_file = cache_dir / f"{cache_key}.mp4"
                 if mp4_file.exists() and mp4_file.stat().st_size > 0:
@@ -849,13 +1403,20 @@ class Hi3510SdMergeView(HomeAssistantView):
                 except ValueError as err:
                     _LOGGER.error("Merge parse fallito %s: %s", fname, err)
                     continue
-                if codec == "h265" or frame_count == 0:
+                if codec == "h265":
+                    try:
+                        mp4_data = await self._ffmpeg_remux(ts_data, audio_raw, "h265")
+                    except Exception as err:
+                        _LOGGER.error("Merge H.265 remux fallito %s: %s", fname, err)
+                        continue
+                elif frame_count == 0:
                     continue
-                try:
-                    mp4_data = await self._ffmpeg_remux(ts_data, audio_raw)
-                except Exception as err:
-                    _LOGGER.error("Merge remux fallito %s: %s", fname, err)
-                    continue
+                else:
+                    try:
+                        mp4_data = await self._ffmpeg_remux(ts_data, audio_raw)
+                    except Exception as err:
+                        _LOGGER.error("Merge remux fallito %s: %s", fname, err)
+                        continue
                 await self.hass.async_add_executor_job(mp4_file.write_bytes, mp4_data)
                 mp4_paths.append(mp4_file)
 
@@ -865,7 +1426,7 @@ class Hi3510SdMergeView(HomeAssistantView):
             pn.async_create(self.hass, f"Concatenazione {len(mp4_paths)} file per {cam_name}...", "Hi3510 SD Merge", notif_id)
             merged_mp4 = await self._ffmpeg_concat(mp4_paths, entry_id, files)
             if merged_mp4 and merged_mp4.exists():
-                source_names = [f["name"].replace(".264", "") for f in files]
+                source_names = [f["name"].replace(".264", "").replace(".265", "") for f in files]
                 meta_path = merged_mp4.with_suffix(".json")
                 meta_data = {"sources": source_names, "created": int(time.time()), "count": len(source_names)}
                 await self.hass.async_add_executor_job(meta_path.write_text, json.dumps(meta_data, ensure_ascii=False))
@@ -877,8 +1438,9 @@ class Hi3510SdMergeView(HomeAssistantView):
             _LOGGER.exception("Merge error: %s", err)
             pn.async_create(self.hass, f"Errore merge: {err}", "Hi3510 SD Merge", notif_id)
 
-    async def _ffmpeg_remux(self, ts_data: bytes, audio_raw: bytes = b"") -> bytes:
-        with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as tmp_in:
+    async def _ffmpeg_remux(self, ts_data: bytes, audio_raw: bytes = b"", codec: str = "h264") -> bytes:
+        suffix = ".hevc" if codec == "h265" else ".ts"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_in:
             tmp_in.write(ts_data)
             input_path = tmp_in.name
         audio_path = None
@@ -887,10 +1449,16 @@ class Hi3510SdMergeView(HomeAssistantView):
                 tmp_aud.write(audio_raw)
                 audio_path = tmp_aud.name
         output_path = input_path.rsplit(".", 1)[0] + ".mp4"
-        cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
-        if audio_path:
-            cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
-        cmd.extend(["-c:v", "copy"])
+        if codec == "h265":
+            cmd = ["ffmpeg", "-y", "-f", "hevc", "-i", input_path]
+            if audio_path:
+                cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-crf", "23"])
+        else:
+            cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
+            if audio_path:
+                cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+            cmd.extend(["-c:v", "copy"])
         if audio_path:
             cmd.extend(["-c:a", "aac", "-b:a", "64k"])
         else:
@@ -898,7 +1466,7 @@ class Hi3510SdMergeView(HomeAssistantView):
         cmd.extend(["-movflags", "+faststart", output_path])
         try:
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
             if proc.returncode != 0:
                 stderr_text = stderr.decode(errors='replace')
                 _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)
@@ -966,7 +1534,7 @@ class Hi3510SdDownloadView(HomeAssistantView):
         if not data or not isinstance(data, dict):
             return web.json_response({"error": "Camera non trovata"}, status=404)
         api = data["api"]
-        base_name = fname.replace(".264", "")
+        base_name = fname.replace(".264", "").replace(".265", "")
         cache_dir = _cache_dir(self.hass)
         cache_dir.mkdir(parents=True, exist_ok=True)
         mp4_file = cache_dir / f"{entry_id}_{base_name}.mp4"
@@ -983,18 +1551,20 @@ class Hi3510SdDownloadView(HomeAssistantView):
         except ValueError as err:
             return web.json_response({"error": f"Formato non supportato: {err}"}, status=422)
         if codec == "h265":
-            return web.json_response({"error": "H.265 non supportato"}, status=422)
-        if frame_count == 0:
+            if frame_count == 0:
+                return web.json_response({"error": "Nessun frame video H.265"}, status=422)
+        elif frame_count == 0:
             return web.json_response({"error": "Nessun frame video"}, status=422)
         try:
-            mp4_data = await self._ffmpeg_remux(ts_data, audio_raw)
+            mp4_data = await self._ffmpeg_remux(ts_data, audio_raw, codec)
         except Exception as err:
             return web.json_response({"error": f"Conversione fallita: {err}"}, status=500)
         await self.hass.async_add_executor_job(mp4_file.write_bytes, mp4_data)
         return web.json_response({"ok": True, "cached": False, "size": len(mp4_data)})
 
-    async def _ffmpeg_remux(self, ts_data: bytes, audio_raw: bytes = b"") -> bytes:
-        with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as tmp_in:
+    async def _ffmpeg_remux(self, ts_data: bytes, audio_raw: bytes = b"", codec: str = "h264") -> bytes:
+        suffix = ".hevc" if codec == "h265" else ".ts"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_in:
             tmp_in.write(ts_data)
             input_path = tmp_in.name
         audio_path = None
@@ -1003,10 +1573,16 @@ class Hi3510SdDownloadView(HomeAssistantView):
                 tmp_aud.write(audio_raw)
                 audio_path = tmp_aud.name
         output_path = input_path.rsplit(".", 1)[0] + ".mp4"
-        cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
-        if audio_path:
-            cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
-        cmd.extend(["-c:v", "copy"])
+        if codec == "h265":
+            cmd = ["ffmpeg", "-y", "-f", "hevc", "-i", input_path]
+            if audio_path:
+                cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-crf", "23"])
+        else:
+            cmd = ["ffmpeg", "-y", "-f", "mpegts", "-i", input_path]
+            if audio_path:
+                cmd.extend(["-f", "alaw", "-ar", "8000", "-ac", "1", "-i", audio_path])
+            cmd.extend(["-c:v", "copy"])
         if audio_path:
             cmd.extend(["-c:a", "aac", "-b:a", "64k"])
         else:
@@ -1014,7 +1590,7 @@ class Hi3510SdDownloadView(HomeAssistantView):
         cmd.extend(["-movflags", "+faststart", output_path])
         try:
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
             if proc.returncode != 0:
                 stderr_text = stderr.decode(errors='replace')
                 _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)
