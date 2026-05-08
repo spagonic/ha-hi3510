@@ -21,7 +21,12 @@ The integration communicates entirely over the local network (no cloud dependenc
 Your camera is likely compatible if:
 
 1. **It uses the CamHi, HiP2P, Ctronics, or HiSilicon app** for mobile access
-2. **Its web UI** is accessible at `http://<ip>/web/admin.html`
+2. **Its web UI** looks like this (accessible at `http://<ip>/web/admin.html`):
+
+<p align="center">
+  <img src="docs/webui_example.png" alt="Hi3510 camera web interface" width="300">
+</p>
+
 3. **The URL** `http://<ip>/cgi-bin/hi3510/param.cgi?cmd=getserverinfo` returns data in the format `var key="value";`
 4. **The HTTP 401 response** contains `WWW-Authenticate: Basic realm="hi3510"` or similar
 
@@ -261,11 +266,20 @@ Browse and play back SD card recordings directly from Home Assistant. Two interf
 
 The SD Browser is a full-featured recording manager accessible at `/api/hi3510/sd`. It provides:
 
+<p align="center">
+  <img src="docs/sd_browser_hub.png" alt="SD Browser - Camera Hub" width="700">
+</p>
+
 - **Camera hub**: grid of all cameras, click to enter per-camera view
 - **Sidebar with months**: lists all months that have recordings on SD or in cache, with badge counts (💾 cached, 🔗 merged)
 - **Interactive calendar**: click a month to see a calendar; days with recordings are highlighted with file counts
 - **File list with filters**: view all files for a day, filter by type (alarm 🔴 / recording 📹 / merged 🔗 / cached 💾)
 - **Click-to-play**: click any file to play it inline. If not yet cached, it downloads from SD, converts HXVS→MP4, and plays automatically
+
+<p align="center">
+  <img src="docs/sd_browser_camera.png" alt="SD Browser - Per-camera view" width="700">
+</p>
+
 - **Merge recordings**: select multiple files (checkbox + range select) and merge them into a single continuous video
 - **Merge tracking**: files used in a merge are marked with "✓ unito" badge; merged videos appear at the top with time range labels
 - **Cache management**: "Svuota cache" button to clear all cached files for a camera
