@@ -1,12 +1,12 @@
 # Hi3510 IP Camera - Home Assistant Integration
 
 <p align="center">
-  <img src="custom_components/hi3510/brand/icon@2x.png" alt="Hi3510 IP Camera" width="200">
+  <img src="https://raw.githubusercontent.com/spagonic/ha-hi3510/main/custom_components/hi3510/brand/icon%402x.png" alt="Hi3510 IP Camera" width="200">
 </p>
 
 [![HACS Validation](https://github.com/spagonic/ha-hi3510/actions/workflows/hacs.yaml/badge.svg)](https://github.com/spagonic/ha-hi3510/actions/workflows/hacs.yaml)
 [![Validate with hassfest](https://github.com/spagonic/ha-hi3510/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/spagonic/ha-hi3510/actions/workflows/hassfest.yaml)
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 
 Custom integration for Home Assistant to control IP cameras that use the **Hi3510 CGI protocol** (`/cgi-bin/hi3510/param.cgi`).
 
@@ -269,6 +269,8 @@ The SD Browser is a full-featured recording manager accessible at `/api/hi3510/s
 - **Merge recordings**: select multiple files (checkbox + range select) and merge them into a single continuous video
 - **Merge tracking**: files used in a merge are marked with "✓ unito" badge; merged videos appear at the top with time range labels
 - **Cache management**: "Svuota cache" button to clear all cached files for a camera
+- **Cache size display**: hub shows cache size in MB per camera and total cache size
+- **Global cache purge**: "Svuota tutta la cache" button on the hub to clear all cameras at once
 - **Live counters**: shows cached/total files, merged count, and used-in-merge count per day
 
 ##### How to embed the SD Browser in a dashboard
@@ -499,10 +501,9 @@ The integration registers as a Home Assistant media source, making SD card recor
 
 ### HACS (recommended)
 
-1. Open HACS → **Integrations** → **Custom repositories**
-2. Add `https://github.com/spagonic/ha-hi3510` as **Integration**
-3. Search "Hi3510" and install
-4. Restart Home Assistant
+1. Open HACS → **Integrations**
+2. Search "Hi3510" and install
+3. Restart Home Assistant
 
 ### Manual
 
@@ -523,6 +524,29 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 - Italian
 
 ## Changelog
+
+### 1.7.1
+
+- **SD Browser cache stats**: the hub now shows cache size in MB per camera and total cache size across all cameras
+- **Per-camera purge button**: "🗑 Svuota" button on each camera card to clear its cache without entering the browser
+- **Global cache purge**: "🗑 Svuota tutta la cache" button on the hub to clear all cached files at once
+- **New endpoint**: `DELETE /api/hi3510/sd/clear_all` — clears the entire cache for all cameras
+- **HACS Default**: integration is now in the HACS default repository (no custom repo needed)
+- **README**: updated installation instructions, badge, and icon URL
+
+### 1.7.0
+
+- **Advanced SD Browser playback**: sticky video player with seek bar, speed control (0.5x–8x), mute, screenshot
+- **24h interactive timeline**: zoom (mouse wheel), pan (drag), scrollbar, needle cursor, click-to-play
+- **Prefetch**: next 2 files downloaded in background for seamless continuous playback
+- **Auto-next**: continuous playback across files (downloads automatically if not cached)
+- **Error recovery**: auto-skip to next file on video errors
+- **Go-to-time**: jump to nearest file for a given HH:MM:SS
+- **Download clip**: select time range for auto-download or merge
+- **Multi-camera synchronized playback**: select 2+ cameras, choose a time, parallel download and synced play with per-camera audio toggle and speed sync
+- **H.265 (HXVT) support**: H.265 recordings now playable via ffmpeg transcode to H.264 — works in SD Browser, legacy views, merge, and media browser
+- **Sidebar layout**: month list + compact calendar on left, player + timeline on right
+- **File list toggle**: hidden by default, toggle for merge operations
 
 ### 1.6.0
 

@@ -239,6 +239,52 @@ _SD_CSS2 = (
 )
 
 
+def _cache_size_for_entry(hass: HomeAssistant, entry_id: str) -> tuple[int, int]:
+    """Ritorna (num_files, total_bytes) per i file cache di un entry."""
+    cd = _cache_dir(hass)
+    prefix = f"{entry_id}_"
+    count = 0
+    total = 0
+    if not cd.exists():
+        return 0, 0
+    for f in cd.iterdir():
+        if f.name.startswith(prefix) and f.suffix in (".mp4", ".json"):
+            if f.suffix == ".mp4":
+                count += 1
+            total += f.stat().st_size
+    return count, total
+
+
+def _cache_size_total(hass: HomeAssistant) -> tuple[int, int]:
+    """Ritorna (num_files, total_bytes) per tutta la cache."""
+    cd = _cache_dir(hass)
+    count = 0
+    total = 0
+    if not cd.exists():
+        return 0, 0
+    for f in cd.iterdir():
+        if f.suffix == ".mp4":
+            count += 1
+            total += f.stat().st_size
+    return count, total
+
+
+def _clear_all_cache(hass: HomeAssistant) -> int:
+    """Svuota tutta la cache. Ritorna numero file rimossi."""
+    cd = _cache_dir(hass)
+    count = 0
+    if not cd.exists():
+        return 0
+    for f in cd.iterdir():
+        if f.suffix in (".mp4", ".json"):
+            try:
+                f.unlink()
+                count += 1
+            except OSError:
+                pass
+    return count
+
+
 class Hi3510SdHubView(HomeAssistantView):
     requires_auth = False
     url = "/api/hi3510/sd"
@@ -296,7 +342,8 @@ class Hi3510SdHubView(HomeAssistantView):
             cam_name = _get_cam_name(self.hass, entry_id)
             cached = await self.hass.async_add_executor_job(_cached_files_for_entry, self.hass, entry_id)
             merged = await self.hass.async_add_executor_job(_merged_files_for_entry, self.hass, entry_id)
-            cams.append({"entry_id": entry_id, "name": cam_name, "cached": len(cached) + len(merged)})
+            cache_count, cache_bytes = await self.hass.async_add_executor_job(_cache_size_for_entry, self.hass, entry_id)
+            cams.append({"entry_id": entry_id, "name": cam_name, "cached": len(cached) + len(merged), "cache_mb": round(cache_bytes / 1048576, 1)})
         cams.sort(key=lambda c: c["name"].lower())
         # Preserve filter in query string for sub-page back links
         qs_parts = []
@@ -308,22 +355,42 @@ class Hi3510SdHubView(HomeAssistantView):
             qs_parts.append(f"area={area_filter}")
         qs = f"?{'&'.join(qs_parts)}" if qs_parts else ""
         import html as html_mod
+        # Total cache stats
+        total_count, total_bytes = await self.hass.async_add_executor_job(_cache_size_total, self.hass)
+        total_mb = round(total_bytes / 1048576, 1)
         cards = ""
         for c in cams:
             ne = html_mod.escape(c["name"])
             url = f"/api/hi3510/sd/{c['entry_id']}{qs}"
             cnt = c["cached"]
+            cmb = c["cache_mb"]
             if cnt > 0:
-                badge = f'<div style="color:#4caf50;font-size:0.8em;margin-top:4px">\U0001f7e2 {cnt} video</div>'
+                badge = f'<div style="color:#4caf50;font-size:0.8em;margin-top:4px">\U0001f7e2 {cnt} video \u00b7 {cmb} MB</div>'
             else:
                 badge = '<div style="color:#666;font-size:0.8em;margin-top:4px">\u26aa nessun video</div>'
-            cards += f'<div class="cam-card" onclick="location.href=\'{url}\'"><div class="cam-icon">\U0001f4f9</div><div class="cam-name">{ne}</div>{badge}</div>'
+            purge_btn = ""
+            if cmb > 0:
+                purge_btn = f'<button onclick="event.stopPropagation();purge(\'{c["entry_id"]}\')" style="margin-top:6px;background:#b71c1c;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75em;cursor:pointer">\U0001f5d1 Svuota</button>'
+            cards += f'<div class="cam-card" onclick="location.href=\'{url}\'"><div class="cam-icon">\U0001f4f9</div><div class="cam-name">{ne}</div>{badge}{purge_btn}</div>'
         css = _SD_CSS + _SD_CSS2
-        area_label = f" — {area_filter.title()}" if area_filter else ""
+        area_label = f" \u2014 {area_filter.title()}" if area_filter else ""
+        total_label = f" \u00b7 {total_mb} MB cache totale" if total_count > 0 else ""
+        purge_all = f'<button onclick="purgeAll()" style="background:#b71c1c;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.85em;cursor:pointer">\U0001f5d1 Svuota tutta la cache ({total_mb} MB)</button>' if total_count > 0 else ""
         html = f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SD Browser{area_label}</title><style>{css}</style></head><body>'
-        html += f'<div class="header"><div class="header-left"><h1>\U0001f4be SD Browser{area_label}</h1><div class="subtitle">{len(cams)} camere</div></div></div>'
-        html += f'<div class="grid">{cards if cards else chr(60)+"div class="+chr(34)+"empty"+chr(34)+chr(62)+"Nessuna camera Hi3510 configurata"+chr(60)+"/div"+chr(62)}</div></body></html>'
-        return web.Response(text=html, content_type="text/html")
+        html += f'<div class="header"><div class="header-left"><h1>\U0001f4be SD Browser{area_label}</h1><div class="subtitle">{len(cams)} camere{total_label}</div></div><div>{purge_all}</div></div>'
+        html += f'<div class="grid">{cards if cards else chr(60)+"div class="+chr(34)+"empty"+chr(34)+chr(62)+"Nessuna camera Hi3510 configurata"+chr(60)+"/div"+chr(62)}</div>'
+        html += '<div class="toast" id="toast"></div>'
+        html += """<script>
+async function purge(eid){if(!confirm('Svuotare la cache per questa camera?'))return;
+const r=await fetch('/api/hi3510/sd/'+eid+'/clear',{method:'DELETE'});const d=await r.json();
+showToast(d.removed+' file rimossi');setTimeout(()=>location.reload(),1500)}
+async function purgeAll(){if(!confirm('Svuotare TUTTA la cache di tutte le camere?'))return;
+const r=await fetch('/api/hi3510/sd/clear_all',{method:'DELETE'});const d=await r.json();
+showToast(d.removed+' file rimossi');setTimeout(()=>location.reload(),1500)}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+</script>"""
+        html += '</body></html>'
+        return web.Response(body=html.encode("utf-8", errors="replace"), content_type="text/html", charset="utf-8")
 
 
 class Hi3510SdBrowserView(HomeAssistantView):
@@ -1639,4 +1706,20 @@ class Hi3510SdClearView(HomeAssistantView):
             return count
         hass = self.hass
         removed = await hass.async_add_executor_job(_do_clear)
+        return web.json_response({"removed": removed})
+
+
+class Hi3510SdClearAllView(HomeAssistantView):
+    """Svuota tutta la cache di tutte le camere."""
+    requires_auth = False
+    url = "/api/hi3510/sd/clear_all"
+    name = "api:hi3510_sd_clear_all"
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        self.hass = hass
+
+    async def delete(self, request: web.Request) -> web.Response:
+        if not _is_local(request, self.hass):
+            return web.Response(text="Forbidden", status=HTTPStatus.FORBIDDEN)
+        removed = await self.hass.async_add_executor_job(_clear_all_cache, self.hass)
         return web.json_response({"removed": removed})
