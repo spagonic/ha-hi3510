@@ -112,7 +112,7 @@ def _cache_stats_for_entry(hass: HomeAssistant, entry_id: str) -> dict[str, dict
 async def _build_sd_index(hass: HomeAssistant, entry_id: str, day: str, force: bool = False) -> list[dict]:
     idx_file = _index_path(hass, entry_id, day)
     if not force and _index_fresh(idx_file, day):
-        return json.loads(idx_file.read_text())
+        return await hass.async_add_executor_job(lambda: json.loads(idx_file.read_text()))
     data = hass.data.get(DOMAIN, {}).get(entry_id)
     if not data or not isinstance(data, dict):
         return []
