@@ -24,7 +24,7 @@ Your camera is likely compatible if:
 2. **Its web UI** looks like this (accessible at `http://<ip>/web/admin.html`):
 
 <p align="center">
-  <img src="docs/webui_example.png" alt="Hi3510 camera web interface" width="300">
+  <img src="https://raw.githubusercontent.com/spagonic/ha-hi3510/main/docs/webui_example.png" alt="Hi3510 camera web interface" width="300">
 </p>
 
 3. **The URL** `http://<ip>/cgi-bin/hi3510/param.cgi?cmd=getserverinfo` returns data in the format `var key="value";`
@@ -267,7 +267,7 @@ Browse and play back SD card recordings directly from Home Assistant. Two interf
 The SD Browser is a full-featured recording manager accessible at `/api/hi3510/sd`. It provides:
 
 <p align="center">
-  <img src="docs/sd_browser_hub.png" alt="SD Browser - Camera Hub" width="700">
+  <img src="https://raw.githubusercontent.com/spagonic/ha-hi3510/main/docs/sd_browser_hub.png" alt="SD Browser - Camera Hub" width="700">
 </p>
 
 - **Camera hub**: grid of all cameras, click to enter per-camera view
@@ -277,7 +277,7 @@ The SD Browser is a full-featured recording manager accessible at `/api/hi3510/s
 - **Click-to-play**: click any file to play it inline. If not yet cached, it downloads from SD, converts HXVS→MP4, and plays automatically
 
 <p align="center">
-  <img src="docs/sd_browser_camera.png" alt="SD Browser - Per-camera view" width="700">
+  <img src="https://raw.githubusercontent.com/spagonic/ha-hi3510/main/docs/sd_browser_camera.png" alt="SD Browser - Per-camera view" width="700">
 </p>
 
 - **Merge recordings**: select multiple files (checkbox + range select) and merge them into a single continuous video
