@@ -539,6 +539,13 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 
 ## Changelog
 
+### 1.7.3
+
+- **Network scan fix**: removed incorrect exclusion of 172.x.x.x subnets from discovery scan — cameras on these networks are now found correctly
+- **Scan count fix**: the "Found X camera(s)" message no longer counts the "Rescan" option
+- **Auth-required labels**: cameras behind authentication (401) now show a 🔒 icon and "(auth required)" label in the scan results for clarity
+- **README images**: fixed broken images in HACS repository page (relative paths replaced with absolute GitHub raw URLs)
+
 ### 1.7.1
 
 - **SD Browser cache stats**: the hub now shows cache size in MB per camera and total cache size across all cameras
