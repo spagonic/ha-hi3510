@@ -124,7 +124,7 @@ async def _scan_network(hass: Any) -> list[dict[str, str]]:
     for adapter in adapters:
         for ip_info in adapter.get("ipv4", []):
             addr = ip_info.get("address", "")
-            if addr and not addr.startswith("127.") and not addr.startswith("172."):
+            if addr and not addr.startswith("127."):
                 subnets.append(addr)
 
     if not subnets:
@@ -226,7 +226,9 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
                 name = cam.get("name", "")
                 model = cam.get("model", "")
                 label = host
-                if name and name != "IPCAM":
+                if cam.get("auth_required"):
+                    label = f"🔒 {host} (auth required)"
+                elif name and name != "IPCAM":
                     label = f"{name} ({host})"
                 elif model:
                     label = f"{model} ({host})"
@@ -252,15 +254,18 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
                 continue
             options[key] = cam.get("_label", key)
 
-        # Aggiungi opzione rescan in fondo
-        options["_rescan_"] = "🔄 Rescan network"
-
         if not options:
             # Nessuna cam trovata, vai a manuale
             return self.async_show_form(
                 step_id="no_cameras",
                 data_schema=vol.Schema({}),
             )
+
+        # Conteggio reale camere (senza rescan)
+        camera_count = len(options)
+
+        # Aggiungi opzione rescan in fondo
+        options["_rescan_"] = "🔄 Rescan network"
 
         schema = vol.Schema(
             {vol.Required("selected_camera"): vol.In(options)}
@@ -269,7 +274,7 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="scan",
             data_schema=schema,
-            description_placeholders={"count": str(len(options))},
+            description_placeholders={"count": str(camera_count)},
         )
 
     async def async_step_no_cameras(
