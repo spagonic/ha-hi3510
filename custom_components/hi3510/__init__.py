@@ -46,6 +46,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: Hi3510ConfigEntry) -> bo
     except Hi3510ConnectionError as err:
         raise ConfigEntryNotReady from err
 
+    # Guard: unique_id obbligatorio (derivato dal MAC)
+    if not entry.unique_id:
+        raise ConfigEntryNotReady("Impossibile determinare il MAC della camera — unique_id mancante")
+
     # Crea coordinators
     main_coordinator = Hi3510DataCoordinator(hass, api, entry)
     motion_coordinator = Hi3510MotionCoordinator(hass, api, entry)

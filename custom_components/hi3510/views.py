@@ -262,11 +262,17 @@ class Hi3510PlaybackView(HomeAssistantView):
             cmd.append("-an")
         cmd.extend(["-movflags", "+faststart", output_path])
 
+        proc = None
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            try:
+                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.communicate()
+                raise RuntimeError("ffmpeg timeout dopo 300s")
             if proc.returncode != 0:
                 stderr_text = stderr.decode(errors='replace')
                 _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)
@@ -745,11 +751,12 @@ class Hi3510CacheFileView(HomeAssistantView):
         cache_dir = Path(self.hass.config.path(CACHE_DIR))
         file_path = cache_dir / filename
 
-        if not file_path.exists() or not file_path.suffix == ".mp4":
-            return web.Response(text="File non trovato", status=HTTPStatus.NOT_FOUND)
-
+        # Verifica ownership prima di existence (evita path probing cross-camera)
         if not filename.startswith(f"{entry_id}_"):
             return web.Response(text="Accesso negato", status=HTTPStatus.FORBIDDEN)
+
+        if not file_path.exists() or not file_path.suffix == ".mp4":
+            return web.Response(text="File non trovato", status=HTTPStatus.NOT_FOUND)
 
         file_size = await self.hass.async_add_executor_job(lambda: file_path.stat().st_size)
 

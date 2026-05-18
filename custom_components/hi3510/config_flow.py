@@ -13,6 +13,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import Hi3510ApiClient, Hi3510AuthError, Hi3510CommandError, Hi3510ConnectionError
 from .const import (
@@ -53,29 +54,26 @@ async def _validate_connection(
     hass: Any, data: dict[str, Any]
 ) -> tuple[dict[str, str], str, str]:
     """Valida connessione alla camera. Ritorna (info, mac, osd_name)."""
-    session = aiohttp.ClientSession()
+    session = async_get_clientsession(hass)
+    api = Hi3510ApiClient(
+        host=data[CONF_HOST],
+        port=data[CONF_PORT],
+        username=data[CONF_USERNAME],
+        password=data[CONF_PASSWORD],
+        session=session,
+    )
+    info = await api.get_server_info()
+    net = await api.get_net_attr()
+    mac = net.get("macaddress", "").replace(":", "").lower()
+    if not mac:
+        mac = f"{data[CONF_HOST]}_{data[CONF_PORT]}"
+    osd_name = ""
     try:
-        api = Hi3510ApiClient(
-            host=data[CONF_HOST],
-            port=data[CONF_PORT],
-            username=data[CONF_USERNAME],
-            password=data[CONF_PASSWORD],
-            session=session,
-        )
-        info = await api.get_server_info()
-        net = await api.get_net_attr()
-        mac = net.get("macaddress", "").replace(":", "").lower()
-        if not mac:
-            mac = f"{data[CONF_HOST]}_{data[CONF_PORT]}"
-        osd_name = ""
-        try:
-            osd = await api.get_overlay_attr(1)
-            osd_name = osd.get("name_1", "")
-        except Exception:
-            pass
-        return info, mac, osd_name
-    finally:
-        await session.close()
+        osd = await api.get_overlay_attr(1)
+        osd_name = osd.get("name_1", "")
+    except Exception:
+        pass
+    return info, mac, osd_name
 
 
 async def _probe_host(
@@ -117,15 +115,25 @@ async def _probe_host(
 
 async def _scan_network(hass: Any) -> list[dict[str, str]]:
     """Scansiona la rete locale per cam Hi3510 sulla porta 80."""
-    from homeassistant.components.network import async_get_adapters
-
-    adapters = await async_get_adapters(hass)
     subnets: list[str] = []
-    for adapter in adapters:
-        for ip_info in adapter.get("ipv4", []):
-            addr = ip_info.get("address", "")
-            if addr and not addr.startswith("127."):
-                subnets.append(addr)
+    try:
+        from homeassistant.components.network import async_get_adapters
+        adapters = await async_get_adapters(hass)
+        for adapter in adapters:
+            for ip_info in adapter.get("ipv4", []):
+                addr = ip_info.get("address", "")
+                if addr and not addr.startswith("127."):
+                    subnets.append(addr)
+    except Exception:
+        _LOGGER.warning("Impossibile ottenere gli adattatori di rete — uso fallback socket")
+        import socket
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            if local_ip and not local_ip.startswith("127."):
+                subnets.append(local_ip)
+        except Exception:
+            pass
 
     if not subnets:
         return []
@@ -169,12 +177,17 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    # Cache scan a livello di classe — persiste tra istanze diverse del flow
-    _scan_cache: dict[str, dict[str, str]] = {}
-
     def __init__(self) -> None:
         self._selected_host: str = ""
         self._selected_port: int = DEFAULT_PORT
+
+    def _get_scan_cache(self) -> dict[str, dict[str, str]]:
+        """Ritorna la scan cache da hass.data (condivisa ma non class-level)."""
+        return self.hass.data[DOMAIN].setdefault("_scan_cache", {})
+
+    def _clear_scan_cache(self) -> None:
+        self.hass.data.setdefault(DOMAIN, {})
+        self.hass.data[DOMAIN]["_scan_cache"] = {}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -207,19 +220,24 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
             selected = user_input.get("selected_camera", "")
             if selected == "_rescan_":
                 # Forza nuovo scan
-                Hi3510ConfigFlow._scan_cache.clear()
+                self._clear_scan_cache()
                 return await self.async_step_scan()
-            cam = Hi3510ConfigFlow._scan_cache.get(selected)
+            cam = self._get_scan_cache().get(selected)
             if cam:
                 self._selected_host = cam["host"]
                 self._selected_port = int(cam.get("port", DEFAULT_PORT))
                 return await self.async_step_credentials()
             return await self.async_step_manual()
 
-        # Scan solo se il cache di classe è vuoto
-        if not Hi3510ConfigFlow._scan_cache:
+        # Scan solo se il cache è vuoto
+        scan_cache = self._get_scan_cache()
+        if not scan_cache:
             _LOGGER.debug("Avvio scan rete per cam Hi3510...")
-            cameras = await _scan_network(self.hass)
+            try:
+                cameras = await _scan_network(self.hass)
+            except Exception:
+                _LOGGER.exception("Errore durante la scansione della rete — fallback a manuale")
+                return await self.async_step_manual()
 
             for cam in cameras:
                 host = cam["host"]
@@ -233,8 +251,8 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
                 elif model:
                     label = f"{model} ({host})"
                 key = f"{host}:{cam.get('port', '80')}"
-                Hi3510ConfigFlow._scan_cache[key] = cam
-                Hi3510ConfigFlow._scan_cache[key]["_label"] = label
+                scan_cache[key] = cam
+                scan_cache[key]["_label"] = label
 
         # Filtra cam già configurate dal cache
         configured_macs: set[str] = set()
@@ -245,7 +263,7 @@ class Hi3510ConfigFlow(ConfigFlow, domain=DOMAIN):
             configured_hosts.add(entry.data.get(CONF_HOST, ""))
 
         options: dict[str, str] = {}
-        for key, cam in Hi3510ConfigFlow._scan_cache.items():
+        for key, cam in scan_cache.items():
             host = cam["host"]
             mac = cam.get("macaddress", "").replace(":", "").lower()
             if mac and mac in configured_macs:

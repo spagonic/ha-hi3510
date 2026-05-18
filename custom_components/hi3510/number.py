@@ -8,11 +8,12 @@ from homeassistant.components.number import NumberEntity, NumberEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .api import Hi3510ApiClient
+from .api import Hi3510ApiClient, Hi3510Error
 from .const import DOMAIN, IMAGE_NUMBER_PARAMS
 from .coordinator import Hi3510DataCoordinator
 
@@ -134,10 +135,13 @@ class Hi3510Number(CoordinatorEntity[Hi3510DataCoordinator], NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         desc = self.entity_description
-        if desc.set_fn_name == "set_image_attr":
-            await self._api.set_image_attr(**{desc.set_param: int(value)})
-        elif desc.set_fn_name == "set_audio_in_volume":
-            await self._api.set_audio_in_volume(int(value))
-        elif desc.set_fn_name == "set_audio_out_volume":
-            await self._api.set_audio_out_volume(int(value))
+        try:
+            if desc.set_fn_name == "set_image_attr":
+                await self._api.set_image_attr(**{desc.set_param: int(value)})
+            elif desc.set_fn_name == "set_audio_in_volume":
+                await self._api.set_audio_in_volume(int(value))
+            elif desc.set_fn_name == "set_audio_out_volume":
+                await self._api.set_audio_out_volume(int(value))
+        except Hi3510Error as err:
+            raise HomeAssistantError(f"Errore camera: {err}") from err
         await self.coordinator.async_request_refresh()

@@ -1420,6 +1420,13 @@ class Hi3510SdMergeView(HomeAssistantView):
 
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
+        # Lock per entry_id: evita merge concorrenti sullo stesso entry
+        self._merge_locks: dict[str, asyncio.Lock] = {}
+
+    def _get_lock(self, entry_id: str) -> asyncio.Lock:
+        if entry_id not in self._merge_locks:
+            self._merge_locks[entry_id] = asyncio.Lock()
+        return self._merge_locks[entry_id]
 
     async def post(self, request: web.Request, entry_id: str) -> web.Response:
         if not _is_local(request, self.hass):
@@ -1434,76 +1441,80 @@ class Hi3510SdMergeView(HomeAssistantView):
         data = self.hass.data.get(DOMAIN, {}).get(entry_id)
         if not data or not isinstance(data, dict):
             return web.json_response({"error": "Camera non trovata"}, status=404)
+        lock = self._get_lock(entry_id)
+        if lock.locked():
+            return web.json_response({"error": "Merge già in corso per questa camera"}, status=409)
         self.hass.async_create_task(self._do_merge(entry_id, files, data["api"]))
         return web.json_response({"message": f"Merge avviato per {len(files)} file. Riceverai una notifica al termine."})
 
     async def _do_merge(self, entry_id: str, files: list[dict], api) -> None:
-        cache_dir = _cache_dir(self.hass)
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        cam_name = _get_cam_name(self.hass, entry_id)
-        notif_id = f"hi3510_merge_{entry_id}_{int(time.time())}"
-        total = len(files)
-        pn.async_create(self.hass, f"Merge {total} file per {cam_name}...", "Hi3510 SD Merge", notif_id)
-        mp4_paths: list[Path] = []
-        try:
-            for i, f in enumerate(files):
-                fname = f["name"]
-                full_path = f["full"]
-                base_name = fname.replace(".264", "").replace(".265", "")
-                cache_key = f"{entry_id}_{base_name}"
-                mp4_file = cache_dir / f"{cache_key}.mp4"
-                if mp4_file.exists() and mp4_file.stat().st_size > 0:
+        async with self._get_lock(entry_id):
+            cache_dir = _cache_dir(self.hass)
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cam_name = _get_cam_name(self.hass, entry_id)
+            notif_id = f"hi3510_merge_{entry_id}_{int(time.time())}"
+            total = len(files)
+            pn.async_create(self.hass, f"Merge {total} file per {cam_name}...", "Hi3510 SD Merge", notif_id)
+            mp4_paths: list[Path] = []
+            try:
+                for i, f in enumerate(files):
+                    fname = f["name"]
+                    full_path = f["full"]
+                    base_name = fname.replace(".264", "").replace(".265", "")
+                    cache_key = f"{entry_id}_{base_name}"
+                    mp4_file = cache_dir / f"{cache_key}.mp4"
+                    if mp4_file.exists() and mp4_file.stat().st_size > 0:
+                        mp4_paths.append(mp4_file)
+                        continue
+                    pn.async_create(self.hass, f"Download {i+1}/{total}: {fname}...", "Hi3510 SD Merge", notif_id)
+                    try:
+                        raw_data = await api.download_sd_file(full_path)
+                    except Exception as err:
+                        _LOGGER.error("Merge download fallito %s: %s", full_path, err)
+                        pn.async_create(self.hass, f"Download fallito: {fname} - {err}", "Hi3510 SD Merge", notif_id)
+                        return
+                    if len(raw_data) < 100:
+                        continue
+                    pn.async_create(self.hass, f"Conversione {i+1}/{total}: {fname}...", "Hi3510 SD Merge", notif_id)
+                    try:
+                        ts_data, frame_count, codec, audio_raw = await self.hass.async_add_executor_job(hxvs_to_mpegts, raw_data)
+                    except ValueError as err:
+                        _LOGGER.error("Merge parse fallito %s: %s", fname, err)
+                        continue
+                    if codec == "h265":
+                        try:
+                            mp4_data = await self._ffmpeg_remux(ts_data, audio_raw, "h265")
+                        except Exception as err:
+                            _LOGGER.error("Merge H.265 remux fallito %s: %s", fname, err)
+                            continue
+                    elif frame_count == 0:
+                        continue
+                    else:
+                        try:
+                            mp4_data = await self._ffmpeg_remux(ts_data, audio_raw)
+                        except Exception as err:
+                            _LOGGER.error("Merge remux fallito %s: %s", fname, err)
+                            continue
+                    await self.hass.async_add_executor_job(mp4_file.write_bytes, mp4_data)
                     mp4_paths.append(mp4_file)
-                    continue
-                pn.async_create(self.hass, f"Download {i+1}/{total}: {fname}...", "Hi3510 SD Merge", notif_id)
-                try:
-                    raw_data = await api.download_sd_file(full_path)
-                except Exception as err:
-                    _LOGGER.error("Merge download fallito %s: %s", full_path, err)
-                    pn.async_create(self.hass, f"Download fallito: {fname} - {err}", "Hi3510 SD Merge", notif_id)
-                    return
-                if len(raw_data) < 100:
-                    continue
-                pn.async_create(self.hass, f"Conversione {i+1}/{total}: {fname}...", "Hi3510 SD Merge", notif_id)
-                try:
-                    ts_data, frame_count, codec, audio_raw = await self.hass.async_add_executor_job(hxvs_to_mpegts, raw_data)
-                except ValueError as err:
-                    _LOGGER.error("Merge parse fallito %s: %s", fname, err)
-                    continue
-                if codec == "h265":
-                    try:
-                        mp4_data = await self._ffmpeg_remux(ts_data, audio_raw, "h265")
-                    except Exception as err:
-                        _LOGGER.error("Merge H.265 remux fallito %s: %s", fname, err)
-                        continue
-                elif frame_count == 0:
-                    continue
-                else:
-                    try:
-                        mp4_data = await self._ffmpeg_remux(ts_data, audio_raw)
-                    except Exception as err:
-                        _LOGGER.error("Merge remux fallito %s: %s", fname, err)
-                        continue
-                await self.hass.async_add_executor_job(mp4_file.write_bytes, mp4_data)
-                mp4_paths.append(mp4_file)
 
-            if len(mp4_paths) < 2:
-                pn.async_create(self.hass, f"Merge annullato: solo {len(mp4_paths)} file convertiti", "Hi3510 SD Merge", notif_id)
-                return
-            pn.async_create(self.hass, f"Concatenazione {len(mp4_paths)} file per {cam_name}...", "Hi3510 SD Merge", notif_id)
-            merged_mp4 = await self._ffmpeg_concat(mp4_paths, entry_id, files)
-            if merged_mp4 and merged_mp4.exists():
-                source_names = [f["name"].replace(".264", "").replace(".265", "") for f in files]
-                meta_path = merged_mp4.with_suffix(".json")
-                meta_data = {"sources": source_names, "created": int(time.time()), "count": len(source_names)}
-                await self.hass.async_add_executor_job(meta_path.write_text, json.dumps(meta_data, ensure_ascii=False))
-                size_mb = round(merged_mp4.stat().st_size / 1048576, 1)
-                pn.async_create(self.hass, f"Merge completato: {merged_mp4.name} ({size_mb} MB). {len(source_names)} sorgenti marcati.", "Hi3510 SD Merge", notif_id)
-            else:
-                pn.async_create(self.hass, "Concatenazione ffmpeg fallita", "Hi3510 SD Merge", notif_id)
-        except Exception as err:
-            _LOGGER.exception("Merge error: %s", err)
-            pn.async_create(self.hass, f"Errore merge: {err}", "Hi3510 SD Merge", notif_id)
+                if len(mp4_paths) < 2:
+                    pn.async_create(self.hass, f"Merge annullato: solo {len(mp4_paths)} file convertiti", "Hi3510 SD Merge", notif_id)
+                    return
+                pn.async_create(self.hass, f"Concatenazione {len(mp4_paths)} file per {cam_name}...", "Hi3510 SD Merge", notif_id)
+                merged_mp4 = await self._ffmpeg_concat(mp4_paths, entry_id, files)
+                if merged_mp4 and merged_mp4.exists():
+                    source_names = [f["name"].replace(".264", "").replace(".265", "") for f in files]
+                    meta_path = merged_mp4.with_suffix(".json")
+                    meta_data = {"sources": source_names, "created": int(time.time()), "count": len(source_names)}
+                    await self.hass.async_add_executor_job(meta_path.write_text, json.dumps(meta_data, ensure_ascii=False))
+                    size_mb = round(merged_mp4.stat().st_size / 1048576, 1)
+                    pn.async_create(self.hass, f"Merge completato: {merged_mp4.name} ({size_mb} MB). {len(source_names)} sorgenti marcati.", "Hi3510 SD Merge", notif_id)
+                else:
+                    pn.async_create(self.hass, "Concatenazione ffmpeg fallita", "Hi3510 SD Merge", notif_id)
+            except Exception as err:
+                _LOGGER.exception("Merge error: %s", err)
+                pn.async_create(self.hass, f"Errore merge: {err}", "Hi3510 SD Merge", notif_id)
 
     async def _ffmpeg_remux(self, ts_data: bytes, audio_raw: bytes = b"", codec: str = "h264") -> bytes:
         suffix = ".hevc" if codec == "h265" else ".ts"
@@ -1531,9 +1542,15 @@ class Hi3510SdMergeView(HomeAssistantView):
         else:
             cmd.append("-an")
         cmd.extend(["-movflags", "+faststart", output_path])
+        proc = None
         try:
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            try:
+                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.communicate()
+                raise RuntimeError("ffmpeg timeout dopo 300s")
             if proc.returncode != 0:
                 stderr_text = stderr.decode(errors='replace')
                 _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)
@@ -1560,9 +1577,16 @@ class Hi3510SdMergeView(HomeAssistantView):
                 lst.write(f"file '{p}'\n")
             list_path = lst.name
         cmd = ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", "-movflags", "+faststart", str(merged_path)]
+        proc = None
         try:
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            try:
+                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.communicate()
+                _LOGGER.error("ffmpeg concat timeout dopo 300s")
+                return None
             if proc.returncode != 0:
                 _LOGGER.error("ffmpeg concat fallito: %s", stderr.decode(errors='replace')[-500:])
                 return None
@@ -1655,9 +1679,15 @@ class Hi3510SdDownloadView(HomeAssistantView):
         else:
             cmd.append("-an")
         cmd.extend(["-movflags", "+faststart", output_path])
+        proc = None
         try:
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            try:
+                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.communicate()
+                raise RuntimeError("ffmpeg timeout dopo 300s")
             if proc.returncode != 0:
                 stderr_text = stderr.decode(errors='replace')
                 _LOGGER.debug("ffmpeg stderr completo: %s", stderr_text)

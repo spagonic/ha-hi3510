@@ -62,7 +62,7 @@ class Hi3510InfraredSelect(CoordinatorEntity[Hi3510DataCoordinator], SelectEntit
     _attr_translation_key = "infrared"
     _attr_icon = "mdi:flashlight"
     _attr_entity_category = EntityCategory.CONFIG
-    _attr_options = list(IR_MODE_LABELS.values())  # ["Auto", "On", "Off"]
+    _attr_options: list[str] = list(IR_MODE_LABELS.values())  # ["Auto", "On", "Off"]
 
     def __init__(
         self,

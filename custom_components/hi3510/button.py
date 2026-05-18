@@ -67,7 +67,12 @@ class Hi3510RebootButton(ButtonEntity):
         return DeviceInfo(identifiers={(DOMAIN, self._entry.unique_id)})
 
     async def async_press(self) -> None:
-        await self._api.reboot()
+        from .api import Hi3510ConnectionError
+        try:
+            await self._api.reboot()
+        except Hi3510ConnectionError:
+            # La camera chiude la connessione durante il reboot — è atteso
+            pass
 
 
 class Hi3510PtzButton(ButtonEntity):

@@ -6,11 +6,12 @@ from homeassistant.components.text import TextEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .api import Hi3510ApiClient
+from .api import Hi3510ApiClient, Hi3510Error
 from .const import DOMAIN
 from .coordinator import Hi3510DataCoordinator
 
@@ -66,5 +67,8 @@ class Hi3510OsdText(CoordinatorEntity[Hi3510DataCoordinator], TextEntity):
         return osd_data.get(f"name_{self._region}", "")
 
     async def async_set_value(self, value: str) -> None:
-        await self._api.set_overlay_attr(self._region, name=value)
+        try:
+            await self._api.set_overlay_attr(self._region, name=value)
+        except Hi3510Error as err:
+            raise HomeAssistantError(f"Errore camera: {err}") from err
         await self.coordinator.async_request_refresh()

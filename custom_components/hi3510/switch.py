@@ -9,11 +9,12 @@ from homeassistant.components.switch import SwitchEntity, SwitchEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .api import Hi3510ApiClient
+from .api import Hi3510ApiClient, Hi3510Error
 from .const import DOMAIN
 from .coordinator import Hi3510DataCoordinator
 
@@ -161,20 +162,26 @@ class Hi3510Switch(CoordinatorEntity[Hi3510DataCoordinator], SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         desc = self.entity_description
-        if desc.set_fn_name == "_set_osd_show":
-            region = desc.set_on_args["region"]
-            await self._api.set_overlay_attr(region, show="1")
-        else:
-            fn = getattr(self._api, desc.set_fn_name)
-            await fn(**desc.set_on_args)
+        try:
+            if desc.set_fn_name == "_set_osd_show":
+                region = desc.set_on_args["region"]
+                await self._api.set_overlay_attr(region, show="1")
+            else:
+                fn = getattr(self._api, desc.set_fn_name)
+                await fn(**desc.set_on_args)
+        except Hi3510Error as err:
+            raise HomeAssistantError(f"Errore camera: {err}") from err
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         desc = self.entity_description
-        if desc.set_fn_name == "_set_osd_show":
-            region = desc.set_off_args["region"]
-            await self._api.set_overlay_attr(region, show="0")
-        else:
-            fn = getattr(self._api, desc.set_fn_name)
-            await fn(**desc.set_off_args)
+        try:
+            if desc.set_fn_name == "_set_osd_show":
+                region = desc.set_off_args["region"]
+                await self._api.set_overlay_attr(region, show="0")
+            else:
+                fn = getattr(self._api, desc.set_fn_name)
+                await fn(**desc.set_off_args)
+        except Hi3510Error as err:
+            raise HomeAssistantError(f"Errore camera: {err}") from err
         await self.coordinator.async_request_refresh()

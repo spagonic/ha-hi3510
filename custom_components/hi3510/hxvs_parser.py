@@ -113,10 +113,14 @@ def _write_ts_packets(
                     adapt = bytearray([0x00])
                     adapt.extend(b'\xFF' * max(0, stuff - 2))
                 avail = _TS_PACKET_SIZE - 4 - 1 - len(adapt)
+                if avail <= 0:
+                    break
                 chunk = payload[offset:offset + avail]
             else:
                 adapt.extend(b'\xFF' * stuff)
                 avail = _TS_PACKET_SIZE - 4 - 1 - len(adapt)
+                if avail <= 0:
+                    break
                 chunk = payload[offset:offset + avail]
 
         pkt[1] = (0x40 if (first and pusi) else 0x00) | ((pid >> 8) & 0x1F)
@@ -166,7 +170,7 @@ def _parse_container(data: bytes) -> tuple[bool, str, frozenset, list[tuple[int,
         psize = struct.unpack_from("<I", data, pos + 4)[0]
         ts_ms = struct.unpack_from("<I", data, pos + 8)[0]
         hxvf_list.append((pos, psize, ts_ms))
-        pos += 4
+        pos += 16 + max(psize, 1)
 
     # Estrai frame audio HXAF
     hxaf_list: list[tuple[int, int, int]] = []

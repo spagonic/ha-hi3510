@@ -92,7 +92,7 @@ class Hi3510DataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.debug("Errore polling %s: %s", func.__name__, err)
             return None
         except Exception:
-            _LOGGER.debug("Errore inatteso polling %s", func.__name__, exc_info=True)
+            _LOGGER.warning("Errore inatteso polling %s", func.__name__, exc_info=True)
             return None
 
 
