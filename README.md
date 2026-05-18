@@ -539,6 +539,22 @@ Copy `custom_components/hi3510/` to your HA `config/custom_components/` director
 
 ## Changelog
 
+### 1.7.4
+
+- **Config flow scan fix**: network scan no longer shows "Unknown error occurred" — any exception during scan now silently falls back to manual entry form (fixes issue #1)
+- **Scan fallback**: uses `socket` as fallback if `homeassistant.components.network` is unavailable
+- **hxvs_parser**: fixed O(n²) HXVF frame scan (`pos += 4` → `pos += 16 + psize`) — parsing is now linear and dramatically faster on large recordings
+- **hxvs_parser**: guard against infinite loop in MPEG-TS packet stuffing
+- **ffmpeg**: subprocess is now killed on timeout instead of being left as a zombie process
+- **SD merge**: `asyncio.Lock` per camera prevents concurrent merge operations from corrupting cache files — returns 409 if a merge is already in progress
+- **config_flow**: `_scan_cache` moved from class-level to `hass.data` — fixes race condition between concurrent config flows
+- **config_flow**: uses `async_get_clientsession` instead of creating a raw `aiohttp.ClientSession`
+- **Startup guard**: raises `ConfigEntryNotReady` if `unique_id` is `None` (camera MAC not available) — prevents entity ID collisions with multiple cameras
+- **Reboot button**: `Hi3510ConnectionError` is now caught and treated as success (camera drops the TCP connection during reboot — was incorrectly reported as an error)
+- **Switch / Number / Text**: SET operations now raise `HomeAssistantError` on API failure instead of propagating unhandled exceptions
+- **Coordinator**: unexpected errors now logged at `WARNING` instead of `DEBUG`
+- **CacheFileView**: entry_id ownership is checked before file existence (prevents cross-camera file probing)
+
 ### 1.7.3
 
 - **Network scan fix**: removed incorrect exclusion of 172.x.x.x subnets from discovery scan — cameras on these networks are now found correctly
